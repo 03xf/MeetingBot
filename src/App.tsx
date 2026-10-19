@@ -8,13 +8,19 @@ import type {
   StoredSession,
 } from '../shared/protocol';
 import {
-  appendSegment,
   nextSegmentId,
   percentile,
-  reindexSegments,
   type TranscriptSegment,
 } from '../shared/transcript';
-import { isLikelyQuestion } from '../shared/textHeuristics';
+import {
+  claimQuestion,
+  clearQuestionTranscript,
+  collectQuestionSegment,
+  hasPendingAnswer,
+  loadQuestionSession,
+  questionText,
+  restoreQuestion,
+} from '../shared/questionQueue';
 import { captureKindForPlatform } from '../shared/platform';
 import { deriveServiceHealth } from '../shared/healthState';
 import { LoopbackCapture } from './audio/loopbackCapture';
@@ -54,7 +60,7 @@ let seq = 0;
 const uid = (p: string) => `${p}-${++seq}-${Date.now()}`;
 
 function newSession(name: string): StoredSession {
-  return { id: uid('s'), name, createdAt: Date.now(), turns: [], segments: [] };
+  return { id: uid('s'), name, createdAt: Date.now(), turns: [], segments: [], pendingQuestion: [], questionQueueVersion: 1 };
 }
 
 /** legacy single-slot KB → resume slot (dual-slot material, P0-2) */
@@ -82,7 +88,7 @@ export function App() {
   const [showKnowledge, setShowKnowledge] = useState(false);
   const [showHud, setShowHud] = useState(true);
   const [hud, setHud] = useState<HudStats>({ count: 0 });
-  const [continuous, setContinuous] = useState(false);
+  const [waitingConfirmation, setWaitingConfirmation] = useState<string | null>(null);
   const [mics, setMics] = useState<{ deviceId: string; label: string }[]>([]);
   const [micActive, setMicActive] = useState(false);
   const [partials, setPartials] = useState<{ them?: string; me?: string }>({});
@@ -99,6 +105,8 @@ export function App() {
   const currentIdRef = useRef<string>('');
   const answerLangRef = useRef<AnswerLang>('chinese');
   const loaded = useRef(false);
+  const partialsRef = useRef<{ them?: string; me?: string }>({});
+  const waitingRef = useRef<string | null>(null);
 
   // UI language: settings-driven; ref mirror so stable callbacks stay fresh
   const t = getDict(settings?.ui.lang);
@@ -109,7 +117,6 @@ export function App() {
   if (!themInputRef.current) themInputRef.current = new MicCapture();
   if (!micRef.current) micRef.current = new MicCapture();
   settingsRef.current = settings;
-  sessionsRef.current = sessions;
   currentIdRef.current = currentId;
 
   const current = useMemo(
@@ -118,8 +125,19 @@ export function App() {
   );
   const segments = current?.segments ?? [];
 
+  // Publish to the ref before React renders: ASR events and rapid confirmation
+  // clicks must observe the same queue snapshot, even within one event loop turn.
+  const updateSessions = useCallback((fn: (list: StoredSession[]) => StoredSession[]) => {
+    const next = fn(sessionsRef.current);
+    sessionsRef.current = next;
+    setSessions(next);
+  }, []);
   const patchSession = useCallback((id: string, fn: (s: StoredSession) => StoredSession) => {
-    setSessions((list) => list.map((s) => (s.id === id ? fn(s) : s)));
+    updateSessions((list) => list.map((s) => (s.id === id ? fn(s) : s)));
+  }, [updateSessions]);
+  const waitForFinal = useCallback((sid: string | null) => {
+    waitingRef.current = sid;
+    setWaitingConfirmation(sid);
   }, []);
 
   const appendTurn = useCallback(
@@ -196,22 +214,18 @@ export function App() {
       const sid = currentIdRef.current;
       if (!sid) return;
       const requestId = uid('req');
-      const segs = sessionsRef.current.find((x) => x.id === sid)?.segments ?? [];
-      // continuous: resolve the actual question NOW — the other party's latest
-      // line — so the turn label (and thus session history) carries the real
-      // question instead of a constant '对方最新发言' (v1 history-label bug)
-      let question = text;
+      const session = sessionsRef.current.find((x) => x.id === sid);
+      if (!session) return;
+      const segs = session.segments ?? [];
+      const question = mode === 'continuous' ? questionText(session) : text;
       if (mode === 'continuous') {
-        for (let i = segs.length - 1; i >= 0; i--) {
-          if ((segs[i].speaker ?? 'them') === 'them') {
-            question = segs[i].text;
-            break;
-          }
-        }
+        const claimed = claimQuestion(session, requestId, MAX_TURNS);
+        if (!claimed) return;
+        patchSession(sid, () => claimed);
+      } else {
+        appendTurn(sid, { id: requestId, kind: mode, label: question ?? '', text: '', status: 'streaming' });
       }
-      const label = question ?? (mode === 'continuous' ? tRef.current.app.latestRemark : '');
-      appendTurn(sid, { id: requestId, kind: mode, label, text: '', status: 'streaming' });
-      if (mode === 'segment' || mode === 'free') maybeTitle(sid, text);
+      if (mode !== 'translate') maybeTitle(sid, question);
       const material = mode === 'translate' ? {} : currentMaterial();
       const payload: LlmAskPayload = {
         requestId,
@@ -223,9 +237,11 @@ export function App() {
         history: mode === 'translate' ? undefined : buildHistory(),
         ...material,
       };
-      window.mc.llmAsk(payload);
+      try { window.mc.llmAsk(payload); } catch (e) {
+        patchSession(sid, (s) => restoreQuestion(s, requestId, String(e)));
+      }
     },
-    [appendTurn, buildHistory, currentMaterial, maybeTitle],
+    [appendTurn, buildHistory, currentMaterial, maybeTitle, patchSession],
   );
 
   const askShot = useCallback(
@@ -264,18 +280,13 @@ export function App() {
       if (f.sessions.length) {
         // heal legacy duplicate segment ids (worker counter used to reset per
         // engine rebuild — translations then landed on multiple bubbles)
-        setSessions(
-          f.sessions.map((s) =>
-            migrateKbSlots(
-              { ...s, segments: reindexSegments(s.segments ?? []) },
-              tRef.current.app.legacyKbName,
-            ),
-          ),
-        );
+        updateSessions(() => f.sessions.map((s) => migrateKbSlots(
+          loadQuestionSession(s, tRef.current.question.interrupted), tRef.current.app.legacyKbName,
+        )));
         setCurrentId(f.currentId && f.sessions.some((s) => s.id === f.currentId) ? f.currentId : f.sessions[0].id);
       } else {
         const s = newSession(tRef.current.app.sessionN(1));
-        setSessions([s]);
+        updateSessions(() => [s]);
         setCurrentId(s.id);
       }
       loaded.current = true;
@@ -288,10 +299,13 @@ export function App() {
         setAsr((s) => ({ ...s, workerState: ev.state }));
       } else if (ev.kind === 'error') {
         setAsr((s) => ({ ...s, phase: ev.fatal ? 'error' : s.phase, lastError: ev.message }));
+        waitForFinal(null);
       } else if (ev.kind === 'partial') {
-        setPartials((p) => ({ ...p, [ev.speaker]: ev.text }));
+        partialsRef.current = { ...partialsRef.current, [ev.speaker]: ev.text };
+        setPartials(partialsRef.current);
       } else if (ev.kind === 'segment') {
-        setPartials((p) => ({ ...p, [ev.speaker]: undefined })); // final replaces the live partial
+        partialsRef.current = { ...partialsRef.current, [ev.speaker]: undefined };
+        setPartials(partialsRef.current);
         const e2eMs = Date.now() - ev.timings.speechEndTs;
         const inferMs = ev.timings.inferEndTs - ev.timings.inferStartTs;
         e2eSamples.current.push(e2eMs);
@@ -304,12 +318,10 @@ export function App() {
           count: e2eSamples.current.length,
         });
         const sid = currentIdRef.current;
-        setSessions((list) =>
+        updateSessions((list) =>
           list.map((s) =>
             s.id === sid
-              ? {
-                  ...s,
-                  segments: appendSegment(s.segments ?? [], {
+              ? collectQuestionSegment(s, {
                     // NOT ev.id: the worker counter resets per engine rebuild,
                     // duplicating ids inside a persisted session
                     id: nextSegmentId(s.segments ?? []),
@@ -320,8 +332,7 @@ export function App() {
                     endTs: ev.timings.speechEndTs,
                     e2eMs,
                     inferMs,
-                  }),
-                }
+                  }, uid('heard'))
               : s,
           ),
         );
@@ -336,24 +347,31 @@ export function App() {
     });
 
     const offLlm = window.mc.onLlmEvent((ev) => {
-      setSessions((list) =>
-        list.map((s) => ({
-          ...s,
-          turns: s.turns.map((t) => {
-            if (t.id !== ev.requestId) return t;
-            if (ev.kind === 'knowledge') return { ...t, knowledge: ev.knowledge };
-            if (ev.kind === 'delta') return { ...t, text: t.text + ev.text };
-            if (ev.kind === 'done') return { ...t, text: ev.text || t.text, status: 'done' };
-            return { ...t, status: 'error', error: ev.message };
-          }),
-        })),
+      updateSessions((list) =>
+        list.map((s) => {
+          if (ev.kind === 'error') return restoreQuestion(s, ev.requestId, ev.message);
+          const turn = s.turns.find((t) => t.id === ev.requestId);
+          if (!turn || turn.status !== 'streaming') return s;
+          if (ev.kind === 'done' && turn.questionBatch && !(ev.text || turn.text).trim()) {
+            return restoreQuestion(s, ev.requestId, tRef.current.question.emptyAnswer);
+          }
+          return {
+            ...s,
+            turns: s.turns.map((t) => {
+              if (t.id !== ev.requestId) return t;
+              if (ev.kind === 'knowledge') return { ...t, knowledge: ev.knowledge };
+              if (ev.kind === 'delta') return { ...t, text: t.text + ev.text };
+              return { ...t, text: ev.text || t.text, status: 'done' };
+            }),
+          };
+        }),
       );
       // fold finished ANSWER turns into the session memo (async, off-path);
       // translate/vision turns are not interview Q&A
       if (ev.kind === 'done') {
         const s = sessionsRef.current.find((x) => x.turns.some((t) => t.id === ev.requestId));
         const t = s?.turns.find((x) => x.id === ev.requestId);
-        if (s && t && (t.kind === 'segment' || t.kind === 'continuous' || t.kind === 'free')) {
+        if (s && t?.status === 'done' && (t.kind === 'segment' || t.kind === 'continuous' || t.kind === 'free')) {
           enqueueMemoUpdate(s.id, t.label, ev.text || t.text);
         }
       }
@@ -412,17 +430,15 @@ export function App() {
     prewarm(false);
   }, [currentId, prewarm]);
 
-  // continuous mode: only the OTHER party's questions trigger it (never my own
-  // mic), question-gated + append, per current session.
-  const lastSeg = segments.length ? segments[segments.length - 1] : null;
+  // A click while live text is still being revised waits for its final segment.
+  // This is a single pending confirmation, never a timer or an automatic mode.
   useEffect(() => {
-    if (!continuous || !lastSeg) return;
-    if ((lastSeg.speaker ?? 'them') !== 'them') return; // ignore my own voice
-    if (!isLikelyQuestion(lastSeg.text)) return;
-    const timer = setTimeout(() => askLlm('continuous'), 1100);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [continuous, lastSeg?.id, lastSeg?.endTs]);
+    if (!waitingConfirmation || waitingRef.current !== waitingConfirmation) return;
+    if (waitingConfirmation !== currentId) { waitForFinal(null); return; }
+    if (partialsRef.current.them?.trim()) return;
+    waitForFinal(null);
+    askLlm('continuous');
+  }, [waitingConfirmation, currentId, partials, askLlm, waitForFinal]);
 
   // Windows: Electron system loopback. macOS/Linux: selected ordinary input
   // (typically a virtual audio device for meeting/system audio).
@@ -480,7 +496,7 @@ export function App() {
   const setSeg = useCallback(
     (segId: number, patch: Partial<TranscriptSegment>) => {
       const sid = currentIdRef.current;
-      setSessions((list) =>
+      updateSessions((list) =>
         list.map((s) =>
           s.id === sid
             ? { ...s, segments: (s.segments ?? []).map((g) => (g.id === segId ? { ...g, ...patch } : g)) }
@@ -488,7 +504,7 @@ export function App() {
         ),
       );
     },
-    [],
+    [updateSessions],
   );
 
   const translateSegment = useCallback(
@@ -563,13 +579,15 @@ export function App() {
   }, []);
 
   const clearTranscript = useCallback(() => {
-    patchSession(currentIdRef.current, (s) => ({ ...s, segments: [] }));
-  }, [patchSession]);
+    waitForFinal(null);
+    patchSession(currentIdRef.current, clearQuestionTranscript);
+  }, [patchSession, waitForFinal]);
 
   const cancelTurn = useCallback(
     (id: string) => {
       window.mc.llmCancel(id);
-      patchSession(currentIdRef.current, (s) => ({
+      patchSession(currentIdRef.current, (s) => s.turns.find((t) => t.id === id)?.questionBatch
+        ? restoreQuestion(s, id, tRef.current.question.cancelled) : ({
         ...s,
         turns: s.turns.map((t) => (t.id === id ? { ...t, status: 'done' } : t)),
       }));
@@ -579,12 +597,12 @@ export function App() {
 
   const createSession = useCallback(() => {
     const s = newSession(tRef.current.app.sessionN(sessionsRef.current.length + 1));
-    setSessions((list) => [...list, s]);
+    updateSessions((list) => [...list, s]);
     setCurrentId(s.id);
-  }, []);
+  }, [updateSessions]);
 
   const deleteSession = useCallback((id: string) => {
-    setSessions((list) => {
+    updateSessions((list) => {
       const next = list.filter((s) => s.id !== id);
       if (next.length === 0) {
         const s = newSession(tRef.current.app.sessionN(1));
@@ -594,7 +612,19 @@ export function App() {
       setCurrentId((cur) => (cur === id ? next[0].id : cur));
       return next;
     });
-  }, []);
+  }, [updateSessions]);
+
+  const clearAnswers = useCallback(() => {
+    patchSession(currentIdRef.current, (s) => {
+      let next = s;
+      for (const turn of s.turns) {
+        if (turn.status !== 'streaming') continue;
+        window.mc.llmCancel(turn.id);
+        if (turn.questionBatch) next = restoreQuestion(next, turn.id, tRef.current.question.cancelled);
+      }
+      return { ...next, turns: [] };
+    });
+  }, [patchSession]);
 
   const renameSession = useCallback(
     (id: string, name: string) => {
@@ -718,6 +748,17 @@ export function App() {
     [settings, asr, capturing],
   );
   const answersReady = health?.answersAvailable ?? true;
+  const questionBusy = !!current && hasPendingAnswer(current);
+  const questionCount = current?.pendingQuestion?.length ?? 0;
+  const waiting = waitingConfirmation === currentId;
+  const confirmDisabled = !answersReady || questionBusy || (!questionCount && !partials.them?.trim());
+  const confirmQuestion = useCallback(() => {
+    if (waitingRef.current) { waitForFinal(null); return; }
+    const s = sessionsRef.current.find((s) => s.id === currentIdRef.current);
+    if (!answersReady || !s || hasPendingAnswer(s)) return;
+    if (partialsRef.current.them?.trim()) { waitForFinal(s.id); return; }
+    askLlm('continuous');
+  }, [answersReady, askLlm, waitForFinal]);
 
   return (
     <I18nProvider lang={settings?.ui.lang}>
@@ -757,11 +798,12 @@ export function App() {
             </select>
           )}
           <button
-            className={continuous ? 'btn btn-on' : 'btn'}
-            onClick={() => setContinuous((v) => !v)}
-            title={t.titlebar.continuousTitle}
+            className="btn btn-primary"
+            onClick={confirmQuestion}
+            disabled={!waiting && confirmDisabled}
+            title={t.question.hint}
           >
-            {t.titlebar.continuous}
+            {waiting ? t.question.cancelWait : t.question.confirm} ({questionCount})
           </button>
           <button
             className={settings?.llm.answerWithVision ? 'btn btn-on' : 'btn'}
@@ -901,6 +943,12 @@ export function App() {
           partials={partials}
           answersReady={answersReady}
           answersHint={t.health.answersDisabled}
+          pendingText={current ? questionText(current) : ''}
+          pendingCount={questionCount}
+          waiting={waiting}
+          questionBusy={questionBusy}
+          confirmDisabled={confirmDisabled}
+          onConfirm={confirmQuestion}
           onAsk={(text) => askLlm('segment', text)}
           onTranslate={translateSegment}
           onClear={clearTranscript}
@@ -921,14 +969,14 @@ export function App() {
           visionReady={visionReady}
           answersReady={answersReady}
           answersHint={t.health.answersDisabled}
-          onSwitch={setCurrentId}
+          onSwitch={(id) => { waitForFinal(null); setCurrentId(id); }}
           onNew={createSession}
           onDelete={deleteSession}
           onRename={renameSession}
           onPickKb={(slot) => void pickKb(slot)}
           onClearKb={clearKb}
           onCancel={cancelTurn}
-          onClear={() => patchSession(currentIdRef.current, (s) => ({ ...s, turns: [] }))}
+          onClear={clearAnswers}
           onFreeAsk={(q) => askLlm('free', q)}
           onShotAsk={askShot}
         />

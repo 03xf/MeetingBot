@@ -19,6 +19,8 @@ export interface TranscriptSegment {
   /** end-to-end latency (speech end -> rendered), for the HUD */
   e2eMs?: number;
   inferMs?: number;
+  /** A confirmed question seals its bubbles; later speech starts a fresh bubble. */
+  questionBoundary?: boolean;
 }
 
 export interface AppendOptions {
@@ -66,6 +68,7 @@ export function appendSegment(
   if (
     last &&
     (last.speaker ?? 'them') === (seg.speaker ?? 'them') &&
+    !last.questionBoundary &&
     !last.translation &&
     !last.translating
   ) {

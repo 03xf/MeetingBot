@@ -19,6 +19,8 @@ Live transcription of the other side · first-person teleprompter answers · cap
 
 ## Download
 
+> **v0.2.0-beta.4: collect the whole question, then confirm manually.** Transcription continues; confirmation combines all other-party speech since the previous submission. New speech received while answering stays queued for the next question. See the [release notes (中文)](docs/releases/v0.2.0-beta.4.md). The upstream demo videos below show the older automatic answering mode, now replaced by manual confirmation.
+
 > **Personal knowledge edition:** This repository extends [JWM0203/MeetingCopilot](https://github.com/JWM0203/MeetingCopilot) with a shared, multi-document personal library, local retrieval, knowledge-first answering and inspectable reference passages. See the [personal knowledge guide (中文)](docs/user/PERSONAL_KNOWLEDGE.zh-CN.md). The Windows downloads below are built from this enhanced edition.
 
 **Just want to use it?** Download the installer — no Node.js, no Python, no commands.

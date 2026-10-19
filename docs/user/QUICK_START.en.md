@@ -84,8 +84,8 @@ Review the summary and click "Enter MeetingCopilot". The wizard writes the whole
 
 1. Play something with speech in it (a meeting, a video, a podcast).
 2. Click **▶ Start** in the title bar; the Transcript pane on the left starts filling.
-3. Click **⚡Ans** on one of their lines and the right pane streams an answer written to be read aloud.
-4. Turn on **Auto** in the title bar to let the AI answer by itself — only question-like sentences trigger it.
+3. Wait until the question is complete, then click **Confirm answer** to combine all other-party speech received since the last confirmation. Your microphone transcript is excluded.
+4. Preview the pending question in the left pane. Recording continues while answering, and new speech stays queued for the next question. Failed or cancelled answers return to the queue. Single-line **⚡Ans** and selected-text answers do not advance this queue. A confirmation during live text waits for the current segment to finalize; this wait can be cancelled.
 5. For answers grounded in your experience, import material with **📄Resume** / **📋JD** (`.md/.txt/.docx/.pdf`). Parsing is local; the text is only sent to the LLM you configured, and only as context for a question you asked.
 
 Other title-bar controls:

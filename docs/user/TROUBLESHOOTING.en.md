@@ -47,7 +47,7 @@ macOS has no system loopback capture: install a virtual device such as BlackHole
 
 - "AI answers are not configured yet" in the panes: no LLM key is stored. Transcription and answers are independent services; missing one never disables the other. Add the key in Settings, or re-run the setup wizard.
 - Answers error out while transcription is fine: usually a provider-side problem (balance, rate limit, model id). Hit "Test connection" on the AI-answers key and look the code up in the table above.
-- "Auto" never fires: it only triggers on question-like lines from the other party, and never on your own microphone. Use "⚡Ans" on a line to force an answer.
+- Use **Confirm answer** once the complete question has arrived. Silence and question marks do not trigger answers. The button is disabled when there is no new other-party speech, a confirmed answer is still running, or no answer model is configured. Your microphone is excluded. **Cancel wait** means the current live segment has not finalized yet.
 
 ## 4. The local transcription engine will not start
 

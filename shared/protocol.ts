@@ -420,6 +420,18 @@ export type AsrEvent =
 
 // ---------- Sessions (multi-conversation, persisted) ----------
 
+export interface QuestionChunk {
+  id: string;
+  segmentId: number;
+  text: string;
+}
+
+export interface QuestionBatch {
+  chunks: QuestionChunk[];
+  epoch: number;
+  restored?: boolean;
+}
+
 export interface StoredTurn {
   id: string;
   kind: 'segment' | 'continuous' | 'free' | 'translate' | 'vision';
@@ -427,6 +439,7 @@ export interface StoredTurn {
   text: string;
   status: 'streaming' | 'done' | 'error';
   error?: string;
+  questionBatch?: QuestionBatch;
 }
 
 export interface StoredSession {
@@ -436,6 +449,11 @@ export interface StoredSession {
   turns: StoredTurn[];
   /** per-session transcript (isolated per meeting, same as the conversation) */
   segments?: import('./transcript').TranscriptSegment[];
+  /** Raw finalized interviewer fragments, independent of UI bubble merging/caps. */
+  pendingQuestion?: QuestionChunk[];
+  questionQueueVersion?: 1;
+  /** Clearing transcripts invalidates older failed requests' restore snapshots. */
+  questionEpoch?: number;
   /** true once named (auto from first question, or manually renamed) */
   titled?: boolean;
   /** legacy single-slot KB (pre dual-slot); migrated to the resume slot on load */

@@ -411,6 +411,14 @@ body {
 }
 
 /* ---------- transcript ---------- */
+.pane-transcript > .pane-head { gap: 8px; }
+.question-draft { flex-shrink: 0; margin: 10px 12px 0; padding: 10px 12px; border: 1px solid var(--border-1); border-radius: 8px; background: var(--surface); }
+.question-draft-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.question-draft-head strong { font-size: 13px; }
+.question-draft-hint, .question-draft-empty { font-size: 12px; color: var(--text-muted); margin: 7px 0 0; line-height: 1.5; }
+.question-preview { margin-top: 8px; font-size: 12px; }
+.question-preview summary { cursor: pointer; color: var(--text-muted); }
+.question-preview > div { max-height: 130px; overflow: auto; margin-top: 6px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; user-select: text; }
 .transcript {
   flex: 1;
   overflow-y: auto;

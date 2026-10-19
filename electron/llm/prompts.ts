@@ -335,7 +335,7 @@ export function buildAnswerMessages(input: AnswerPromptInput): ChatMessage[] {
   const q = (input.question ?? '').trim();
   const hint = q ? questionHint(classifyQuestion(q)) : '';
   const ask = q
-    ? `面试官刚才说：\n“${q}”\n${hint ? hint + '\n' : ''}请直接给出我可以照着念的回答。`
+    ? `${input.mode === 'continuous' ? '以下是用户本次确认的完整问题，可能由多段转写组成。请合并理解全部语句，覆盖其中的各个提问与补充条件，不要只回答最后一句。历史转录仅作背景，不要重复回答上轮问题。\n' : ''}面试官刚才说：\n“${q}”\n${hint ? hint + '\n' : ''}请直接给出我可以照着念的回答。`
     : '基于上面最近的转录，面试官最新的话需要我回应。请直接给出我可以照着念的回答。';
 
   msgs.push({ role: 'user', content: `${contextBlock}\n\n${ask}` });

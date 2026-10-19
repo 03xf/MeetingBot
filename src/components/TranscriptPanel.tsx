@@ -21,6 +21,12 @@ export function TranscriptPanel({
   partials,
   answersReady,
   answersHint,
+  pendingText,
+  pendingCount,
+  waiting,
+  questionBusy,
+  confirmDisabled,
+  onConfirm,
   onAsk,
   onTranslate,
   onClear,
@@ -30,6 +36,12 @@ export function TranscriptPanel({
   /** false = no LLM configured; transcription keeps working, ⚡答 does not */
   answersReady: boolean;
   answersHint: string;
+  pendingText: string;
+  pendingCount: number;
+  waiting: boolean;
+  questionBusy: boolean;
+  confirmDisabled: boolean;
+  onConfirm: () => void;
   onAsk: (text: string) => void;
   onTranslate: (seg: TranscriptSegment) => void;
   onClear: () => void;
@@ -79,6 +91,26 @@ export function TranscriptPanel({
           {t.transcript.clear}
         </button>
       </header>
+      <div className="question-draft">
+        <div className="question-draft-head">
+          <strong>{t.question.count(pendingCount)}</strong>
+          <button
+            className="btn btn-sm btn-primary question-confirm"
+            disabled={!waiting && confirmDisabled}
+            onClick={onConfirm}
+            title={!answersReady ? answersHint : t.question.hint}
+          >
+            {waiting ? t.question.cancelWait : questionBusy ? t.question.working : t.question.confirm}
+          </button>
+        </div>
+        <p className="question-draft-hint">{waiting ? t.question.waiting : questionBusy ? t.question.collecting : t.question.hint}</p>
+        {pendingText ? (
+          <details className="question-preview">
+            <summary>{t.question.preview}</summary>
+            <div>{pendingText}</div>
+          </details>
+        ) : <p className="question-draft-empty">{t.question.empty}</p>}
+      </div>
       <div className="transcript" ref={boxRef} onScroll={onScroll} onMouseUp={captureSelection}>
         {segments.length === 0 ? (
           <div className="pane-empty">{t.transcript.empty}</div>

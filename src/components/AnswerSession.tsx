@@ -1,17 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import type { KbSlot, StoredSession, KnowledgeContext } from '../../shared/protocol';
+import type { KbSlot, StoredSession, StoredTurn, KnowledgeContext } from '../../shared/protocol';
 import { useT } from '../i18n';
 import { AnswerMarkdown } from './AnswerMarkdown';
 
 export type TurnKind = 'segment' | 'continuous' | 'free' | 'translate' | 'vision';
 
-export interface AnswerTurn {
-  id: string;
-  kind: TurnKind;
-  label: string;
-  text: string;
-  status: 'streaming' | 'done' | 'error';
-  error?: string;
+export interface AnswerTurn extends StoredTurn {
   knowledge?: KnowledgeContext;
 }
 

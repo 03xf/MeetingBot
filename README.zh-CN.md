@@ -19,6 +19,8 @@
 
 ## 下载
 
+> **v0.2.0-beta.4：自动归并问题＋手动确认回答**。持续转写，点「确认回答」合并上次确认后的所有对方语句；回答期间的新语句留给下一轮。见 [版本说明](docs/releases/v0.2.0-beta.4.md)。下方演示视频来自上游旧版本，自动触发回答现已替换为手动确认。
+
 > **个人知识库增强版**：本仓库基于 [JWM0203/MeetingCopilot](https://github.com/JWM0203/MeetingCopilot)，新增跨会话多文档知识库、本地检索、知识库优先回答和参考原文展示。见 [使用说明](docs/user/PERSONAL_KNOWLEDGE.zh-CN.md)。下方 Windows 安装包由本仓库的增强版源码构建。
 
 **普通用户**：下载安装包直接用——不需要 Node.js、不需要 Python、不用敲命令。
