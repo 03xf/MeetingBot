@@ -15,14 +15,14 @@ For people who downloaded an installer. No Node.js, no Python, no commands.
 | API keys | One for speech recognition, one for AI answers (a single provider can cover both). You create them; the provider bills you |
 | Time | About 5 minutes the first time, mostly signing up and copying keys |
 
-MeetingCopilot is **bring-your-own-key**: no accounts, no server, no fee collected by this app. If "API key" means nothing to you yet, read [API_KEYS.en.md](API_KEYS.en.md) first.
+MeetingBot is **bring-your-own-key**: no accounts, no server, no fee collected by this app. If "API key" means nothing to you yet, read [API_KEYS.en.md](API_KEYS.en.md) first.
 
 ---
 
 ## Step 1 — download and install
 
-1. Open the [Releases page](https://github.com/JWM0203/MeetingCopilot/releases/latest).
-2. Download `MeetingCopilot-<version>-win-x64.exe` (installer) or `...-win-x64-portable.exe` (portable). The difference and the install locations are in [INSTALL_WINDOWS.en.md](INSTALL_WINDOWS.en.md).
+1. Open the [Releases page](https://github.com/03xf/MeetingBot/releases/latest).
+2. Download `MeetingBot-<version>-win-x64.exe` (installer) or `...-win-x64-portable.exe` (portable). The difference and the install locations are in [INSTALL_WINDOWS.en.md](INSTALL_WINDOWS.en.md).
 3. This beta is not code-signed, so Windows SmartScreen shows "Windows protected your PC". Once you have confirmed the file came from the official release page above, click **More info → Run anyway**.
 4. Verify the download first if you can: every `.exe` ships with a matching `.exe.sha256` file containing the hash CI computed at build time.
 
@@ -74,7 +74,7 @@ On failure the card shows an error code and the single next action worth taking,
 
 ### 5️⃣ Done
 
-Review the summary and click "Enter MeetingCopilot". The wizard writes the whole plan as a **single** settings update and closes; the main window opens.
+Review the summary and click "Enter MeetingBot". The wizard writes the whole plan as a **single** settings update and closes; the main window opens.
 
 > You can reopen the wizard at any time: **⚙ Settings → Run the setup wizard again**. The main window keeps running while it is open.
 
@@ -109,7 +109,7 @@ Open **⚙ Settings → Custom instructions**, enter your requirements and click
 The main window deliberately stays out of the taskbar, so after hiding it there are two ways back:
 
 - press the show/hide hotkey (`Control+B` by default, changeable in Settings);
-- click the MeetingCopilot icon in the system tray, or pick "Show window" from its menu.
+- click the MeetingBot icon in the system tray, or pick "Show window" from its menu.
 
 The tray menu also has Start/Stop transcription, New session, Settings, Service status, Help & guides, Check for updates and Quit. The first time the window is hidden you get one balloon reminder, and never again.
 
@@ -119,4 +119,4 @@ The tray menu also has Start/Stop transcription, New session, Settings, Service 
 
 1. Open **Help & guides** in the app (tray menu, or Settings → Help & guides). It works offline.
 2. Read [TROUBLESHOOTING.en.md](TROUBLESHOOTING.en.md) for the full error-code table.
-3. Still stuck: Settings → Advanced → Diagnostics, copy the report (it has no keys, resume text or transcripts) and open an issue at [GitHub Issues](https://github.com/JWM0203/MeetingCopilot/issues).
+3. Still stuck: Settings → Advanced → Diagnostics, copy the report (it has no keys, resume text or transcripts) and open an issue at [GitHub Issues](https://github.com/03xf/MeetingBot/issues).

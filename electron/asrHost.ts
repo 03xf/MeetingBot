@@ -45,7 +45,7 @@ export class AsrHost {
     if (this.child) return;
     this.emit({ kind: 'status', state: 'loading', queuedSegments: 0 });
     const child = utilityProcess.fork(join(__dirname, 'asrWorker.js'), [], {
-      serviceName: 'MeetingCopilot ASR',
+      serviceName: 'MeetingBot ASR',
       // 'inherit' binds to the console, NOT redirected stdout — pipe and
       // forward manually so worker logs land in the main process log.
       stdio: 'pipe',

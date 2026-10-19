@@ -196,7 +196,7 @@ export function OnboardingApp() {
     }
   }, [t]);
 
-  /** 进入 MeetingCopilot: the single batched plan patch, then completion */
+  /** 进入 MeetingBot: the single batched plan patch, then completion */
   const finish = useCallback(async () => {
     setBusy(true);
     setError(null);
@@ -241,7 +241,7 @@ export function OnboardingApp() {
       <header className="setup-header">
         <div className="setup-header-top">
           <span className="setup-brand">
-            MeetingCopilot
+            MeetingBot
             {info ? ` · ${t.common.version(info.version, info.platform)}` : ''}
           </span>
           <button className="btn btn-sm" onClick={() => void toggleLang()}>

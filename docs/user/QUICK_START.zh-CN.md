@@ -15,14 +15,14 @@ English version: [QUICK_START.en.md](QUICK_START.en.md)
 | API Key | 语音识别与 AI 回答各需要一个（同一服务商可复用）；Key 由你自己创建，费用由服务商收取 |
 | 时间 | 第一次配置约 5 分钟，主要花在注册和复制 Key 上 |
 
-MeetingCopilot 采用 **BYOK（自带 Key）**：没有账号系统、没有服务器、不代收任何费用。不清楚 API Key 是什么，先看 [API_KEYS.zh-CN.md](API_KEYS.zh-CN.md)。
+MeetingBot 采用 **BYOK（自带 Key）**：没有账号系统、没有服务器、不代收任何费用。不清楚 API Key 是什么，先看 [API_KEYS.zh-CN.md](API_KEYS.zh-CN.md)。
 
 ---
 
 ## 第一步：下载并安装
 
-1. 打开 [Releases 页面](https://github.com/JWM0203/MeetingCopilot/releases/latest)。
-2. 下载 `MeetingCopilot-<版本>-win-x64.exe`（安装版）或 `...-win-x64-portable.exe`（免安装版）。两者的区别与安装位置见 [INSTALL_WINDOWS.zh-CN.md](INSTALL_WINDOWS.zh-CN.md)。
+1. 打开 [Releases 页面](https://github.com/03xf/MeetingBot/releases/latest)。
+2. 下载 `MeetingBot-<版本>-win-x64.exe`（安装版）或 `...-win-x64-portable.exe`（免安装版）。两者的区别与安装位置见 [INSTALL_WINDOWS.zh-CN.md](INSTALL_WINDOWS.zh-CN.md)。
 3. 当前为未签名的 Beta 版本，Windows SmartScreen 会提示「已保护你的电脑」。确认文件来自上面的官方发布页后，点「更多信息」→「仍要运行」。
 4. 建议先核对下载文件的 SHA256：每个 `.exe` 旁边都有同名的 `.exe.sha256` 文件，里面是 CI 构建时算出的哈希值。
 
@@ -74,7 +74,7 @@ MeetingCopilot 采用 **BYOK（自带 Key）**：没有账号系统、没有服�
 
 ### 5️⃣ 完成
 
-确认方案摘要后点「进入 MeetingCopilot」。向导把整套方案作为**一次**设置写入并关闭，主界面随即出现。
+确认方案摘要后点「进入 MeetingBot」。向导把整套方案作为**一次**设置写入并关闭，主界面随即出现。
 
 > 配置向导随时可以重开：主界面 **⚙ 设置 → 重新运行配置向导**。重开时主窗口会保持运行，不会退出应用。
 
@@ -107,7 +107,7 @@ MeetingCopilot 采用 **BYOK（自带 Key）**：没有账号系统、没有服�
 主窗口默认不在任务栏显示，隐藏后有两条路回来：
 
 - 按呼出快捷键（默认 `Control+B`，设置里可改）；
-- 点系统托盘（右下角）里的 MeetingCopilot 图标，或右键菜单里的「显示窗口」。
+- 点系统托盘（右下角）里的 MeetingBot 图标，或右键菜单里的「显示窗口」。
 
 托盘菜单还提供「开始 / 停止转写」「新建会话」「设置」「服务状态」「帮助与教程」「检查更新」「退出」。第一次隐藏窗口时会有一次气泡提示，之后不再重复。
 
@@ -117,4 +117,4 @@ MeetingCopilot 采用 **BYOK（自带 Key）**：没有账号系统、没有服�
 
 1. 先看应用内的 **帮助与教程**（托盘菜单或 设置 → 帮助与教程），内容离线可读。
 2. 再看 [TROUBLESHOOTING.zh-CN.md](TROUBLESHOOTING.zh-CN.md)，里面有完整的错误代码表。
-3. 仍未解决：设置 → 高级设置 → 诊断信息，复制报告（不含 Key、简历和转写内容）后到 [GitHub Issues](https://github.com/JWM0203/MeetingCopilot/issues) 反馈。
+3. 仍未解决：设置 → 高级设置 → 诊断信息，复制报告（不含 Key、简历和转写内容）后到 [GitHub Issues](https://github.com/03xf/MeetingBot/issues) 反馈。

@@ -1,5 +1,7 @@
+# Keep the existing installer identity so MeetingBot upgrades previous builds.
 appId: com.jwm0203.meetingcopilot
-productName: MeetingCopilot
+productName: MeetingBot
+executableName: MeetingBot
 copyright: Copyright © 2025 JWM0203
 
 directories:
@@ -93,7 +95,7 @@ nsis:
   allowToChangeInstallationDirectory: false
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: MeetingCopilot
+  shortcutName: MeetingBot
   # meeting notes, sessions and API keys live in %APPDATA%\MeetingCopilot --
   # an uninstall (or an upgrade, which uninstalls first) must never wipe them
   deleteAppDataOnUninstall: false

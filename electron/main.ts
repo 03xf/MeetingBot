@@ -71,7 +71,7 @@ const MODEL_ID = 'onnx-community/whisper-large-v3-turbo-ONNX';
 /** tray 「检查更新」 (Phase 4). A real updater is Phase 5; until then the honest
  * answer is the releases page, opened through the same allowlist as every other
  * documentation link. */
-const RELEASES_URL = 'https://github.com/03xf/MeetingCopilot-Knowledge/releases';
+const RELEASES_URL = 'https://github.com/03xf/MeetingBot/releases';
 
 /** Region-selection overlay: shows the captured screen as an opaque bg (so a
  * content-protected window never renders black locally) and lets the user drag
@@ -96,11 +96,13 @@ addEventListener('mouseup',e=>{if(!drag)return;drag=false;const r=rect(e);if(r.w
 addEventListener('keydown',e=>{if(e.key==='Escape')window.mc.regionCancel();});
 </script></body></html>`;
 
-app.setName('MeetingCopilot');
+app.setName('MeetingBot');
 
 // E2E/demo hook: run against an isolated profile — must precede the
 // single-instance lock so a test instance never collides with a real one
-if (process.env.MC_USERDATA) app.setPath('userData', process.env.MC_USERDATA);
+// Retain the existing profile and single-instance lock when changing branding.
+// Settings, encrypted keys, knowledge, sessions and downloaded models stay put.
+app.setPath('userData', process.env.MC_USERDATA || join(app.getPath('appData'), 'MeetingCopilot'));
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();

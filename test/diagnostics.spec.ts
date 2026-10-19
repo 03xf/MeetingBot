@@ -221,7 +221,7 @@ describe('buildDiagnosticsReport', () => {
 
   it('states the facts a supporter actually needs', () => {
     const report = buildDiagnosticsReport(facts(seededStore()));
-    expect(report).toContain('MeetingCopilot Diagnostic Report');
+    expect(report).toContain('MeetingBot Diagnostic Report');
     expect(report).toContain('Generated locally. Sensitive content and API keys are excluded.');
     expect(report).toContain('0.1.0 (packaged: no)');
     expect(report).toContain('electron 41.1.1 / node 22.15.0');

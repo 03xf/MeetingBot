@@ -19,12 +19,12 @@ For people using the packaged build. To run from source, see the Development sec
 
 ## Which file to download
 
-The [Releases page](https://github.com/03xf/MeetingCopilot-Knowledge/releases) has two:
+The [Releases page](https://github.com/03xf/MeetingBot/releases) has two:
 
 | File | Type | Best for |
 |---|---|---|
-| `MeetingCopilot-<version>-win-x64.exe` | Installer (NSIS) | Normal use. Adds Start-menu and desktop shortcuts |
-| `MeetingCopilot-<version>-win-x64-portable.exe` | Portable | Not installing anything — a USB stick, or a locked-down machine |
+| `MeetingBot-<version>-win-x64.exe` | Installer (NSIS) | Normal use. Adds Start-menu and desktop shortcuts |
+| `MeetingBot-<version>-win-x64-portable.exe` | Portable | Not installing anything — a USB stick, or a locked-down machine |
 
 Each `.exe` also ships a matching `.exe.sha256` containing the hash CI computed at build time.
 
@@ -33,7 +33,7 @@ Each `.exe` also ships a matching `.exe.sha256` containing the hash CI computed 
 In PowerShell, from your downloads folder:
 
 ```powershell
-Get-FileHash .\MeetingCopilot-<version>-win-x64.exe -Algorithm SHA256
+Get-FileHash .\MeetingBot-<version>-win-x64.exe -Algorithm SHA256
 ```
 
 Compare the output with the value inside the `.sha256` file.
@@ -42,7 +42,7 @@ Compare the output with the value inside the `.sha256` file.
 
 ## Installing (installer build)
 
-1. Double-click `MeetingCopilot-<version>-win-x64.exe`.
+1. Double-click `MeetingBot-<version>-win-x64.exe`.
 2. This beta is **unsigned**, so SmartScreen shows "Windows protected your PC". Once you have confirmed the source, click "More info" → "Run anyway".
 3. The installer is one-click: it does not ask for a path and installs into your **user** profile (under `%LOCALAPPDATA%\Programs\`). It never touches `Program Files` and needs no administrator rights.
 4. Start-menu and desktop shortcuts are created automatically.
@@ -56,8 +56,8 @@ Compare the output with the value inside the `.sha256` file.
 - For a genuinely portable profile, point `MC_USERDATA` at your own folder before launching:
 
   ```powershell
-  $env:MC_USERDATA = "D:\MeetingCopilotData"
-  .\MeetingCopilot-<version>-win-x64-portable.exe
+  $env:MC_USERDATA = "D:\MeetingBotData"
+  .\MeetingBot-<version>-win-x64-portable.exe
   ```
 
   Everything is then written there. This is an advanced option; normal use needs no environment variables.
@@ -65,6 +65,8 @@ Compare the output with the value inside the `.sha256` file.
 ---
 
 ## Where your data lives
+
+The app is now named **MeetingBot**. Its data folder still uses `MeetingCopilot` for compatibility with earlier versions; no manual migration is needed.
 
 | Content | Path |
 |---|---|

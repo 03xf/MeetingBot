@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useT } from '../i18n';
 
-const ISSUES_URL = 'https://github.com/JWM0203/MeetingCopilot/issues';
+const ISSUES_URL = 'https://github.com/03xf/MeetingBot/issues';
 
 export function DiagnosticsPanel({ onClose }: { onClose: () => void }) {
   const t = useT();

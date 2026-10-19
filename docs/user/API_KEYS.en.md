@@ -8,16 +8,16 @@
 
 An API key is a credential you create in a model provider's console. It proves the requests are yours.
 
-- **It is not your account password.** MeetingCopilot never asks for one, in any field.
+- **It is not your account password.** MeetingBot never asks for one, in any field.
 - **It is a billing credential.** Whoever holds it can spend your quota, so keep it out of chats, screenshots and public repos.
 - **It is disposable.** If one leaks, delete it in the provider console and create a new one; your account is unaffected.
 
 ## Who charges you
 
-MeetingCopilot is **BYOK (bring your own key)**:
+MeetingBot is **BYOK (bring your own key)**:
 
 - you create the key at the provider, and the provider bills your usage directly;
-- MeetingCopilot has no accounts and no server; it collects no fee, takes no cut and adds no markup;
+- MeetingBot has no accounts and no server; it collects no fee, takes no cut and adds no markup;
 - every "Test connection" button sends one tiny real request (1 token, ~1.4 s of audio, or a 64×64 image), which may cost a very small amount — and only when you click it.
 
 ## Where keys are stored
@@ -41,9 +41,9 @@ Used for: AI answers and inline transcript translation. Default model `deepseek-
 1. Open the [DeepSeek open platform](https://platform.deepseek.com/).
 2. Sign in with your phone number or email; create an account on first use.
 3. Go to the "API keys" page in the left sidebar.
-4. Click "Create API key" and give it a recognisable name (e.g. MeetingCopilot).
+4. Click "Create API key" and give it a recognisable name (e.g. MeetingBot).
 5. Copy the key immediately — it is usually shown in full only once.
-6. Come back to MeetingCopilot and paste it into the AI-answers card.
+6. Come back to MeetingBot and paste it into the AI-answers card.
 7. Click "Save and test connection". If the balance is insufficient, top up on the platform and retry.
 
 Common problems:
@@ -64,7 +64,7 @@ Used for: cloud streaming speech recognition with `fun-asr-realtime` (default) o
 5. Stay in the main account default workspace (sub-accounts or custom workspaces may lack realtime ASR access).
 6. Open the "API-KEY" page from the avatar menu in the top-right corner.
 7. Click "Create my API-KEY" and confirm with the default workspace selected.
-8. Copy the key, come back to MeetingCopilot and paste it into the speech-recognition card.
+8. Copy the key, come back to MeetingBot and paste it into the speech-recognition card.
 9. Click "Save and test connection".
 
 Common problems:
@@ -84,7 +84,7 @@ Used for: `mimo-v2.5-asr` per-segment ASR, `mimo-v2.5-pro` answers and `mimo-v2.
 3. Go to the "API Keys" page in the console.
 4. Create a new API key and confirm the name.
 5. Copy the key (it starts with `sk-`) — it is usually shown in full only once.
-6. Come back to MeetingCopilot and paste it into the field.
+6. Come back to MeetingBot and paste it into the field.
 7. One key can serve both speech recognition and AI answers (the minimal plan); this is still Beta.
 8. Click "Save and test connection"; switch to the recommended plan if ASR is unavailable.
 
@@ -107,7 +107,7 @@ Used for: the vision model, `https://generativelanguage.googleapis.com/v1beta/op
 
 1. Prepare an OpenAI-compatible base URL (ending in `/v1`) and a model name.
 2. Fill in the base URL, model and API key under Settings → Advanced.
-3. For safety, MeetingCopilot only ever hands the OS browser a URL from its built-in allowlist of official provider pages — visit a custom provider's site yourself.
+3. For safety, MeetingBot only ever hands the OS browser a URL from its built-in allowlist of official provider pages — visit a custom provider's site yourself.
 
 ---
 

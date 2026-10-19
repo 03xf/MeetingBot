@@ -105,18 +105,18 @@ const deepseekHelp: ProviderHelp = {
     '打开 DeepSeek 开放平台（platform.deepseek.com）。',
     '使用手机号或邮箱登录；首次使用请先注册账号。',
     '进入左侧的「API keys」页面。',
-    '点击「创建 API key」，填写一个便于识别的名称（例如 MeetingCopilot）。',
+    '点击「创建 API key」，填写一个便于识别的名称（例如 MeetingBot）。',
     '立即复制生成的 Key —— 它通常只完整显示这一次，关闭弹窗后无法再次查看。',
-    '回到 MeetingCopilot，把 Key 粘贴到下方输入框。',
+    '回到 MeetingBot，把 Key 粘贴到下方输入框。',
     '点击「保存并测试连接」；若提示余额不足，请在平台的充值页面充值后重试。',
   ],
   stepsEn: [
     'Open the DeepSeek open platform (platform.deepseek.com).',
     'Sign in with your phone number or email; create an account on first use.',
     'Go to the "API keys" page in the left sidebar.',
-    'Click "Create API key" and give it a recognisable name (e.g. MeetingCopilot).',
+    'Click "Create API key" and give it a recognisable name (e.g. MeetingBot).',
     'Copy the key immediately — it is usually shown in full only once.',
-    'Come back to MeetingCopilot and paste the key into the field below.',
+    'Come back to MeetingBot and paste the key into the field below.',
     'Click "Save and test connection". If the balance is insufficient, top up on the platform and retry.',
   ],
   faqZh: [
@@ -127,8 +127,8 @@ const deepseekHelp: ProviderHelp = {
     'An API key is not your account password — never share it in chats or screenshots.',
     'An "Insufficient Balance" error means the account needs a top-up; the key itself is still valid.',
   ],
-  billingHintZh: '费用由 DeepSeek 按用量收取，MeetingCopilot 不代收任何费用。',
-  billingHintEn: 'DeepSeek bills you by usage. MeetingCopilot never collects any fee.',
+  billingHintZh: '费用由 DeepSeek 按用量收取，MeetingBot 不代收任何费用。',
+  billingHintEn: 'DeepSeek bills you by usage. MeetingBot never collects any fee.',
 };
 
 const aliyunCnHelp: ProviderHelp = {
@@ -143,7 +143,7 @@ const aliyunCnHelp: ProviderHelp = {
     '确认当前停留在主账号的默认业务空间（子账号或自建业务空间可能没有实时语音识别权限）。',
     '打开右上角头像菜单中的「API-KEY」页面。',
     '点击「创建我的 API-KEY」，业务空间选择默认业务空间后确认。',
-    '复制生成的 Key，回到 MeetingCopilot 粘贴到下方输入框。',
+    '复制生成的 Key，回到 MeetingBot 粘贴到下方输入框。',
     '点击「保存并测试连接」。',
   ],
   stepsEn: [
@@ -154,7 +154,7 @@ const aliyunCnHelp: ProviderHelp = {
     'Stay in the main account default workspace (sub-accounts or custom workspaces may lack realtime ASR access).',
     'Open the "API-KEY" page from the avatar menu in the top-right corner.',
     'Click "Create my API-KEY" and confirm with the default workspace selected.',
-    'Copy the key, come back to MeetingCopilot and paste it into the field below.',
+    'Copy the key, come back to MeetingBot and paste it into the field below.',
     'Click "Save and test connection".',
   ],
   faqZh: [
@@ -167,8 +167,8 @@ const aliyunCnHelp: ProviderHelp = {
     '"Model not found" usually means the account belongs to the international site, which uses a different endpoint.',
     'If the key is missing after creation, switch back to the main account default workspace on the "API-KEY" page.',
   ],
-  billingHintZh: '费用由阿里云按用量收取，MeetingCopilot 不代收任何费用。',
-  billingHintEn: 'Alibaba Cloud bills you by usage. MeetingCopilot never collects any fee.',
+  billingHintZh: '费用由阿里云按用量收取，MeetingBot 不代收任何费用。',
+  billingHintEn: 'Alibaba Cloud bills you by usage. MeetingBot never collects any fee.',
 };
 
 /**
@@ -195,8 +195,8 @@ const aliyunIntlHelp: ProviderHelp = {
     'The international realtime ASR endpoint differs from the mainland one and is still being verified (Beta).',
     'For dependable live captions, prefer a mainland (cn) account for now.',
   ],
-  billingHintZh: '费用由阿里云国际站按用量收取，MeetingCopilot 不代收任何费用。',
-  billingHintEn: 'Alibaba Cloud International bills you by usage. MeetingCopilot never collects any fee.',
+  billingHintZh: '费用由阿里云国际站按用量收取，MeetingBot 不代收任何费用。',
+  billingHintEn: 'Alibaba Cloud International bills you by usage. MeetingBot never collects any fee.',
 };
 
 const mimoHelp: ProviderHelp = {
@@ -210,7 +210,7 @@ const mimoHelp: ProviderHelp = {
     '进入控制台的「API Keys」页面。',
     '点击新建 API Key，填写名称后确认。',
     '复制以 sk- 开头的 Key —— 它通常只完整显示这一次。',
-    '回到 MeetingCopilot，把 Key 粘贴到下方输入框。',
+    '回到 MeetingBot，把 Key 粘贴到下方输入框。',
     '同一个 Key 可以同时用于语音识别与 AI 回答（极简配置方案）；该用法仍处于 Beta。',
     '点击「保存并测试连接」；若语音识别不可用，请改用推荐方案。',
   ],
@@ -220,14 +220,14 @@ const mimoHelp: ProviderHelp = {
     'Go to the "API Keys" page in the console.',
     'Create a new API key and confirm the name.',
     'Copy the key (it starts with sk-) — it is usually shown in full only once.',
-    'Come back to MeetingCopilot and paste the key into the field below.',
+    'Come back to MeetingBot and paste the key into the field below.',
     'One key can serve both speech recognition and AI answers (the minimal plan); this is still Beta.',
     'Click "Save and test connection"; switch to the recommended plan if ASR is unavailable.',
   ],
   faqZh: ['英文文档见 mimo.mi.com 的 en-US 快速开始页面。'],
   faqEn: ['The Chinese quick-start page lives under zh-CN on mimo.mi.com.'],
-  billingHintZh: '费用由 MiMo 平台按用量收取，MeetingCopilot 不代收任何费用。',
-  billingHintEn: 'The MiMo platform bills you by usage. MeetingCopilot never collects any fee.',
+  billingHintZh: '费用由 MiMo 平台按用量收取，MeetingBot 不代收任何费用。',
+  billingHintEn: 'The MiMo platform bills you by usage. MeetingBot never collects any fee.',
 };
 
 const geminiHelp: ProviderHelp = {
@@ -238,7 +238,7 @@ const geminiHelp: ProviderHelp = {
     '打开 Google AI Studio 的 API Key 页面（aistudio.google.com）。',
     '使用 Google 账号登录。',
     '点击 Create API key，按提示选择或新建一个 Google Cloud 项目。',
-    '复制生成的 Key，回到 MeetingCopilot 粘贴到下方输入框。',
+    '复制生成的 Key，回到 MeetingBot 粘贴到下方输入框。',
     '中国大陆网络通常无法直连 Google，请在高级设置中填写本机代理地址（例如 127.0.0.1:7897）。',
     '视觉问答是可选功能，可以跳过；跳过后截图提问会提示尚未配置。',
   ],
@@ -246,12 +246,12 @@ const geminiHelp: ProviderHelp = {
     'Open the API key page in Google AI Studio (aistudio.google.com).',
     'Sign in with your Google account.',
     'Click "Create API key" and pick or create a Google Cloud project when asked.',
-    'Copy the key, come back to MeetingCopilot and paste it into the field below.',
+    'Copy the key, come back to MeetingBot and paste it into the field below.',
     'Google is usually unreachable directly from mainland China — set a local proxy (e.g. 127.0.0.1:7897) in advanced settings.',
     'Visual Q&A is optional and can be skipped; the screenshot button then reports it is not configured.',
   ],
-  billingHintZh: '费用由 Google 按用量收取，MeetingCopilot 不代收任何费用。',
-  billingHintEn: 'Google bills you by usage. MeetingCopilot never collects any fee.',
+  billingHintZh: '费用由 Google 按用量收取，MeetingBot 不代收任何费用。',
+  billingHintEn: 'Google bills you by usage. MeetingBot never collects any fee.',
 };
 
 const customHelp: ProviderHelp = {
@@ -259,15 +259,15 @@ const customHelp: ProviderHelp = {
   stepsZh: [
     '准备一个 OpenAI 兼容的服务地址（以 /v1 结尾）与模型名称。',
     '在高级设置中填写 Base URL、模型与 API Key。',
-    '自定义服务商的官方页面不会由 MeetingCopilot 代为打开，请自行访问。',
+    '自定义服务商的官方页面不会由 MeetingBot 代为打开，请自行访问。',
   ],
   stepsEn: [
     'Prepare an OpenAI-compatible base URL (ending in /v1) and a model name.',
     'Fill in the base URL, model and API key under advanced settings.',
-    'MeetingCopilot never opens a custom provider page for you — visit it yourself.',
+    'MeetingBot never opens a custom provider page for you — visit it yourself.',
   ],
-  billingHintZh: '费用由你选择的服务商收取，MeetingCopilot 不代收任何费用。',
-  billingHintEn: 'Your chosen provider bills you. MeetingCopilot never collects any fee.',
+  billingHintZh: '费用由你选择的服务商收取，MeetingBot 不代收任何费用。',
+  billingHintEn: 'Your chosen provider bills you. MeetingBot never collects any fee.',
 };
 
 /** help metadata by provider — exported so the UI can show INTL guidance

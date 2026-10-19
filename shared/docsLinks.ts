@@ -11,7 +11,7 @@
  */
 import type { UiLang } from './protocol';
 
-const REPO = 'https://github.com/03xf/MeetingCopilot-Knowledge';
+const REPO = 'https://github.com/03xf/MeetingBot';
 /** the docs are read on GitHub, so link the rendered blob, not a raw file */
 const BLOB = `${REPO}/blob/main`;
 

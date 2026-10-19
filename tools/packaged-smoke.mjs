@@ -4,7 +4,7 @@
  * Packaging breaks things unit tests cannot see: app.asar changes every path,
  * a preload may fail to load, a renderer bundle may be missing, native modules
  * may sit on the wrong side of the archive. This launches the real
- * release/win-unpacked/MeetingCopilot.exe against throwaway user-data
+ * release/win-unpacked/MeetingBot.exe against throwaway user-data
  * directories and requires proof that the whole chain came up.
  *
  * Two scenarios, because the app now has two possible startup paths:
@@ -45,7 +45,7 @@ import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const exePath = join(repoRoot, 'release', 'win-unpacked', 'MeetingCopilot.exe');
+const exePath = join(repoRoot, 'release', 'win-unpacked', 'MeetingBot.exe');
 const logPath = join(repoRoot, 'release', 'packaged-smoke.log');
 
 const BOOT_TIMEOUT_MS = 30_000;

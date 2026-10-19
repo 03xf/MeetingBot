@@ -66,7 +66,7 @@ const zh = {
     micStartFail: (msg: string) => `麦克风启动失败: ${msg}`,
     themInputSwitchFail: (msg: string) => `对方音频输入切换失败: ${msg}`,
     translateFail: '（翻译失败）',
-    upgradeNotice: 'MeetingCopilot 现在提供新的配置向导和连接测试。',
+    upgradeNotice: 'MeetingBot 现在提供新的配置向导和连接测试。',
     upgradeCheck: '立即检查配置',
     upgradeSkip: '暂时跳过',
     kbNoText: (name: string) =>
@@ -248,7 +248,7 @@ const zh = {
         title: '2. API Key 是什么',
         lines: [
           'API Key 是你在大模型服务商那边创建的一串凭证，用来证明「这些请求是我发的」，不是你的账号密码。',
-          'MeetingCopilot 自带 Key（BYOK）：Key 由你自己创建、费用由服务商向你收取，本应用不代收任何费用、也没有账号系统。',
+          'MeetingBot 自带 Key（BYOK）：Key 由你自己创建、费用由服务商向你收取，本应用不代收任何费用、也没有账号系统。',
           'Key 使用系统凭据服务（Windows DPAPI / macOS 钥匙串）加密后保存在本机，界面上只会显示后 4 位。',
           '请勿把 Key 贴进聊天记录或截图外传；一旦泄露，去服务商控制台删除并重新创建即可。',
         ],
@@ -315,7 +315,7 @@ const zh = {
         ],
       },
       about: {
-        title: '10. 关于 MeetingCopilot',
+        title: '10. 关于 MeetingBot',
         lines: [
           '本地优先的会议 / 面试助手：转写与回答分别连接你自己配置的服务商，没有账号、没有服务器、没有遥测。',
           '设置、会话、简历等数据保存在本机的用户数据目录，卸载默认不会删除。',
@@ -529,7 +529,7 @@ const en: Dict = {
     micStartFail: (msg: string) => `Microphone failed to start: ${msg}`,
     themInputSwitchFail: (msg: string) => `Failed to switch the other-party input: ${msg}`,
     translateFail: '(translation failed)',
-    upgradeNotice: 'MeetingCopilot now has a setup wizard and connection tests.',
+    upgradeNotice: 'MeetingBot now has a setup wizard and connection tests.',
     upgradeCheck: 'Check my setup',
     upgradeSkip: 'Not now',
     kbNoText: (name: string) =>
@@ -716,7 +716,7 @@ const en: Dict = {
         title: '2. What an API key is',
         lines: [
           'An API key is a credential you create in a model provider console. It proves the requests are yours — it is not your account password.',
-          'MeetingCopilot is bring-your-own-key: you create the key, the provider bills you, and this app collects no fee and has no accounts.',
+          'MeetingBot is bring-your-own-key: you create the key, the provider bills you, and this app collects no fee and has no accounts.',
           'Keys are encrypted with the OS credential store (Windows DPAPI / macOS Keychain) and stored on your machine; the UI only ever shows the last 4 characters.',
           'Never paste a key into a chat or a screenshot. If one leaks, delete it in the provider console and create a new one.',
         ],
@@ -781,7 +781,7 @@ const en: Dict = {
         ],
       },
       about: {
-        title: '10. About MeetingCopilot',
+        title: '10. About MeetingBot',
         lines: [
           'A local-first meeting and interview copilot: transcription and answers each talk to the provider you configured. No accounts, no server, no telemetry.',
           'Settings, sessions and imported material live in the per-user data folder on this machine and survive an uninstall by default.',

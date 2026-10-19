@@ -1,6 +1,6 @@
 <div align="center">
 
-# MeetingCopilot
+# MeetingBot
 
 **Real-time meeting & interview copilot for Windows and macOS**
 
@@ -19,7 +19,7 @@ Live transcription of the other side · first-person teleprompter answers · cap
 
 ## Download
 
-> **v0.2.0-beta.6: custom answer instructions.** Write and save your instructions under **Settings → Custom instructions**. Every subsequent answer includes them across all sessions, including combined questions, single-line answers, free questions and screenshots. Persists after restart; clear to restore the default style. Active audio cuts, personal knowledge and formatted code blocks remain available. See the [release notes (中文)](docs/releases/v0.2.0-beta.6.md). The upstream demos below show the older automatic answering mode, now replaced by manual confirmation.
+> **v0.2.0-beta.7: custom answer instructions.** Write and save your instructions under **Settings → Custom instructions**. Every subsequent answer includes them across all sessions, including combined questions, single-line answers, free questions and screenshots. Persists after restart; clear to restore the default style. Active audio cuts, personal knowledge and formatted code blocks remain available. See the [release notes (中文)](docs/releases/v0.2.0-beta.7.md). The upstream demos below show the older automatic answering mode, now replaced by manual confirmation.
 
 > **Personal knowledge edition:** This repository extends [JWM0203/MeetingCopilot](https://github.com/JWM0203/MeetingCopilot) with a shared, multi-document personal library, local retrieval, knowledge-first answering and inspectable reference passages. See the [personal knowledge guide (中文)](docs/user/PERSONAL_KNOWLEDGE.zh-CN.md). The Windows downloads below are built from this enhanced edition.
 
@@ -30,12 +30,12 @@ Live transcription of the other side · first-person teleprompter answers · cap
 
 | File | Type | Best for |
 |---|---|---|
-| `MeetingCopilot-<version>-win-x64.exe` | Installer (NSIS, per-user) | Normal use — Start-menu and desktop shortcuts, upgrades in place |
-| `MeetingCopilot-<version>-win-x64-portable.exe` | Portable | Not installing anything; note that settings still live in `%APPDATA%` |
+| `MeetingBot-<version>-win-x64.exe` | Installer (NSIS, per-user) | Normal use — Start-menu and desktop shortcuts, upgrades in place |
+| `MeetingBot-<version>-win-x64-portable.exe` | Portable | Not installing anything; note that settings still live in `%APPDATA%` |
 
-**Requirements:** Windows 10 / 11 (x64), no administrator rights, plus your own API key(s) — MeetingCopilot is bring-your-own-key and collects no fee.
+**Requirements:** Windows 10 / 11 (x64), no administrator rights, plus your own API key(s) — MeetingBot is bring-your-own-key and collects no fee.
 
-> ⚠️ **This beta is not code-signed yet**, so Windows SmartScreen will warn you. Confirm the file came from the official release page, then *More info → Run anyway*. Each `.exe` ships a matching `.exe.sha256` with the hash CI computed — verify it with `Get-FileHash .\MeetingCopilot-<version>-win-x64.exe -Algorithm SHA256`.
+> ⚠️ **This beta is not code-signed yet**, so Windows SmartScreen will warn you. Confirm the file came from the official release page, then *More info → Run anyway*. Each `.exe` ships a matching `.exe.sha256` with the hash CI computed — verify it with `Get-FileHash .\MeetingBot-<version>-win-x64.exe -Algorithm SHA256`.
 
 > 🍎 **macOS:** no packaged build in this release. macOS is supported when run from source — see [INSTALL_MACOS.en.md](docs/user/INSTALL_MACOS.en.md).
 

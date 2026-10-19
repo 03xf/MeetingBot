@@ -65,8 +65,8 @@ This affects only the local sidecar ASR and local Whisper backends. **Cloud tran
 ## 5. Windows says "Windows protected your PC"
 
 - This beta is **not code-signed**, and SmartScreen shows that warning for every unsigned app.
-- After confirming the file came from the [official Releases page](https://github.com/JWM0203/MeetingCopilot/releases/latest), click "More info" → "Run anyway".
-- Better: verify the SHA256. Every `.exe` ships with a matching `.exe.sha256` containing the hash CI computed. Run `Get-FileHash .\MeetingCopilot-<version>-win-x64.exe -Algorithm SHA256` in PowerShell and compare.
+- After confirming the file came from the [official Releases page](https://github.com/03xf/MeetingBot/releases/latest), click "More info" → "Run anyway".
+- Better: verify the SHA256. Every `.exe` ships with a matching `.exe.sha256` containing the hash CI computed. Run `Get-FileHash .\MeetingBot-<version>-win-x64.exe -Algorithm SHA256` in PowerShell and compare.
 - Code signing is planned for a later release. Until then, download only from the official release page.
 
 ## 6. The window disappeared
@@ -74,7 +74,7 @@ This affects only the local sidecar ASR and local Whisper backends. **Cloud tran
 The main window deliberately stays out of the taskbar, so after hiding it there are two ways back:
 
 - press the show/hide hotkey (`Control+B` by default);
-- click the MeetingCopilot icon in the system tray, or pick "Show window" from its menu.
+- click the MeetingBot icon in the system tray, or pick "Show window" from its menu.
 
 If another app already owns that hotkey, registration fails silently — the tray is the fallback for exactly that case. You can also pick a different combination in Settings.
 
@@ -94,5 +94,5 @@ If another app already owns that hotkey, registration fails silently — the tra
 ## Still stuck
 
 1. Settings → Advanced → "Diagnostics" → "Copy diagnostics". The report is built locally and contains **no API keys, resume/JD text or transcripts**, so it is safe to paste into a public issue.
-2. Open an issue at [GitHub Issues](https://github.com/JWM0203/MeetingCopilot/issues) with the report and: what you did, what you expected, what happened instead.
+2. Open an issue at [GitHub Issues](https://github.com/03xf/MeetingBot/issues) with the report and: what you did, what you expected, what happened instead.
 3. If a provider is involved, include the error code and request id from "Test connection".

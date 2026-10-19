@@ -8,16 +8,16 @@ English version: [API_KEYS.en.md](API_KEYS.en.md)
 
 API Key 是你在大模型服务商那边创建的一串凭证，用来证明「这些请求是我发的」。
 
-- **它不是你的账号密码。** 不要把账号密码填进 MeetingCopilot，任何输入框都不需要。
+- **它不是你的账号密码。** 不要把账号密码填进 MeetingBot，任何输入框都不需要。
 - **它是收费凭据。** 谁拿到 Key，谁就能用你的额度，所以别贴进聊天记录、截图或公开仓库。
 - **它可以随时作废。** 一旦泄露，去服务商控制台删除这个 Key 再新建一个即可，账号本身不受影响。
 
 ## 费用由谁收
 
-MeetingCopilot 采用 **BYOK（Bring Your Own Key，自带 Key）**：
+MeetingBot 采用 **BYOK（Bring Your Own Key，自带 Key）**：
 
 - Key 由你自己在服务商处创建，用量由服务商直接向你计费；
-- MeetingCopilot 没有账号系统、没有服务器，不代收、不分成、不加价；
+- MeetingBot 没有账号系统、没有服务器，不代收、不分成、不加价；
 - 应用内每个「测试连接」按钮会发起一次极小的真实请求（1 个 token、约 1.4 秒音频或一张 64×64 图片），可能产生极少量费用，且只在你点击时发生。
 
 ## Key 存在哪里
@@ -41,9 +41,9 @@ MeetingCopilot 采用 **BYOK（Bring Your Own Key，自带 Key）**：
 1. 打开 [DeepSeek 开放平台](https://platform.deepseek.com/)。
 2. 使用手机号或邮箱登录；首次使用请先注册账号。
 3. 进入左侧的「API keys」页面。
-4. 点击「创建 API key」，填写一个便于识别的名称（例如 MeetingCopilot）。
+4. 点击「创建 API key」，填写一个便于识别的名称（例如 MeetingBot）。
 5. 立即复制生成的 Key —— 它通常只完整显示这一次，关闭弹窗后无法再次查看。
-6. 回到 MeetingCopilot，把 Key 粘贴到 AI 回答那张卡片。
+6. 回到 MeetingBot，把 Key 粘贴到 AI 回答那张卡片。
 7. 点击「保存并测试连接」；若提示余额不足，请在平台的充值页面充值后重试。
 
 常见问题：
@@ -64,7 +64,7 @@ MeetingCopilot 采用 **BYOK（Bring Your Own Key，自带 Key）**：
 5. 确认当前停留在主账号的默认业务空间（子账号或自建业务空间可能没有实时语音识别权限）。
 6. 打开右上角头像菜单中的「API-KEY」页面。
 7. 点击「创建我的 API-KEY」，业务空间选择默认业务空间后确认。
-8. 复制生成的 Key，回到 MeetingCopilot 粘贴到语音识别那张卡片。
+8. 复制生成的 Key，回到 MeetingBot 粘贴到语音识别那张卡片。
 9. 点击「保存并测试连接」。
 
 常见问题：
@@ -84,7 +84,7 @@ MeetingCopilot 采用 **BYOK（Bring Your Own Key，自带 Key）**：
 3. 进入控制台的「API Keys」页面。
 4. 点击新建 API Key，填写名称后确认。
 5. 复制以 `sk-` 开头的 Key —— 它通常只完整显示这一次。
-6. 回到 MeetingCopilot，把 Key 粘贴到下方输入框。
+6. 回到 MeetingBot，把 Key 粘贴到下方输入框。
 7. 同一个 Key 可以同时用于语音识别与 AI 回答（极简配置方案）；该用法仍处于 Beta。
 8. 点击「保存并测试连接」；若语音识别不可用，请改用推荐方案。
 
@@ -97,7 +97,7 @@ MeetingCopilot 采用 **BYOK（Bring Your Own Key，自带 Key）**：
 1. 打开 [Google AI Studio 的 API Key 页面](https://aistudio.google.com/app/apikey)。
 2. 使用 Google 账号登录。
 3. 点击 Create API key，按提示选择或新建一个 Google Cloud 项目。
-4. 复制生成的 Key，回到 MeetingCopilot 粘贴到视觉模型的 Key 输入框（设置 → 高级设置 → 视觉模型）。
+4. 复制生成的 Key，回到 MeetingBot 粘贴到视觉模型的 Key 输入框（设置 → 高级设置 → 视觉模型）。
 5. 中国大陆网络通常无法直连 Google，请在「视觉代理」里填写本机代理地址（例如 `127.0.0.1:7897`）。
 6. 视觉问答是可选功能，可以跳过；跳过后截图提问会提示尚未配置。
 
@@ -107,7 +107,7 @@ MeetingCopilot 采用 **BYOK（Bring Your Own Key，自带 Key）**：
 
 1. 准备一个 OpenAI 兼容的服务地址（以 `/v1` 结尾）与模型名称。
 2. 在 设置 → 高级设置 里填写 Base URL、模型与 API Key。
-3. 出于安全考虑，MeetingCopilot 只会用系统浏览器打开内置允许列表里的官方页面，自定义服务商的页面请自行访问。
+3. 出于安全考虑，MeetingBot 只会用系统浏览器打开内置允许列表里的官方页面，自定义服务商的页面请自行访问。
 
 ---
 

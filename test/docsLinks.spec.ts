@@ -23,7 +23,7 @@ describe('documentation links', () => {
 
   it('links the rendered docs, never a raw.githubusercontent path', () => {
     for (const url of allDocUrls()) {
-      expect(url.startsWith('https://github.com/03xf/MeetingCopilot-Knowledge'), url).toBe(true);
+      expect(url.startsWith('https://github.com/03xf/MeetingBot'), url).toBe(true);
     }
   });
 });

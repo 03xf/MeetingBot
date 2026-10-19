@@ -1,6 +1,6 @@
 <div align="center">
 
-# MeetingCopilot
+# MeetingBot
 
 **Windows / macOS 实时会议与面试助手**
 
@@ -19,7 +19,7 @@
 
 ## 下载
 
-> **v0.2.0-beta.6：自定义提示词**。在 **设置 → 自定义提示词** 填写并保存，下一次回答就会携带你的要求，所有会话共用，重启后保留。支持截断回答、单句回答、自由提问和截图问答，清空恢复默认风格。保留主动截断录音、知识库和代码框功能。见 [版本说明](docs/releases/v0.2.0-beta.6.md)。下方演示视频来自上游旧版本，自动触发回答现已替换为手动确认。
+> **v0.2.0-beta.7：自定义提示词**。在 **设置 → 自定义提示词** 填写并保存，下一次回答就会携带你的要求，所有会话共用，重启后保留。支持截断回答、单句回答、自由提问和截图问答，清空恢复默认风格。保留主动截断录音、知识库和代码框功能。见 [版本说明](docs/releases/v0.2.0-beta.7.md)。下方演示视频来自上游旧版本，自动触发回答现已替换为手动确认。
 
 > **个人知识库增强版**：本仓库基于 [JWM0203/MeetingCopilot](https://github.com/JWM0203/MeetingCopilot)，新增跨会话多文档知识库、本地检索、知识库优先回答和参考原文展示。见 [使用说明](docs/user/PERSONAL_KNOWLEDGE.zh-CN.md)。下方 Windows 安装包由本仓库的增强版源码构建。
 
@@ -30,12 +30,12 @@
 
 | 文件 | 类型 | 适合 |
 |---|---|---|
-| `MeetingCopilot-<版本>-win-x64.exe` | 安装版（NSIS，当前用户） | 常规使用——带开始菜单和桌面快捷方式，可原地升级 |
-| `MeetingCopilot-<版本>-win-x64-portable.exe` | 免安装版 | 不想装东西；注意设置仍保存在 `%APPDATA%` |
+| `MeetingBot-<版本>-win-x64.exe` | 安装版（NSIS，当前用户） | 常规使用——带开始菜单和桌面快捷方式，可原地升级 |
+| `MeetingBot-<版本>-win-x64-portable.exe` | 免安装版 | 不想装东西；注意设置仍保存在 `%APPDATA%` |
 
-**系统要求**：Windows 10 / 11（x64），无需管理员权限，另需你自己的 API Key——MeetingCopilot 采用 BYOK 自带 Key 模式，不代收任何费用。
+**系统要求**：Windows 10 / 11（x64），无需管理员权限，另需你自己的 API Key——MeetingBot 采用 BYOK 自带 Key 模式，不代收任何费用。
 
-> ⚠️ **当前 Beta 版本尚未做代码签名**，Windows SmartScreen 会弹出提醒。确认文件来自官方发布页后，点「更多信息」→「仍要运行」。每个 `.exe` 旁都有同名的 `.exe.sha256`（CI 构建时算出的哈希），可用 `Get-FileHash .\MeetingCopilot-<版本>-win-x64.exe -Algorithm SHA256` 核对。
+> ⚠️ **当前 Beta 版本尚未做代码签名**，Windows SmartScreen 会弹出提醒。确认文件来自官方发布页后，点「更多信息」→「仍要运行」。每个 `.exe` 旁都有同名的 `.exe.sha256`（CI 构建时算出的哈希），可用 `Get-FileHash .\MeetingBot-<版本>-win-x64.exe -Algorithm SHA256` 核对。
 
 > 🍎 **macOS**：本次没有提供安装包。macOS 支持从源码运行，见 [INSTALL_MACOS.en.md](docs/user/INSTALL_MACOS.en.md)。
 

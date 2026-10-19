@@ -19,12 +19,12 @@ English version: [INSTALL_WINDOWS.en.md](INSTALL_WINDOWS.en.md)
 
 ## 下载哪个文件
 
-[Releases 页面](https://github.com/03xf/MeetingCopilot-Knowledge/releases)提供两个文件：
+[Releases 页面](https://github.com/03xf/MeetingBot/releases)提供两个文件：
 
 | 文件 | 类型 | 适合 |
 |---|---|---|
-| `MeetingCopilot-<版本>-win-x64.exe` | 安装版（NSIS） | 常规使用。装完有开始菜单和桌面快捷方式 |
-| `MeetingCopilot-<版本>-win-x64-portable.exe` | 免安装版 | 不想装东西、想放在 U 盘或受限电脑上临时用 |
+| `MeetingBot-<版本>-win-x64.exe` | 安装版（NSIS） | 常规使用。装完有开始菜单和桌面快捷方式 |
+| `MeetingBot-<版本>-win-x64-portable.exe` | 免安装版 | 不想装东西、想放在 U 盘或受限电脑上临时用 |
 
 每个 `.exe` 旁边还有一个同名的 `.exe.sha256`，里面是 CI 构建时算出的哈希值。
 
@@ -33,7 +33,7 @@ English version: [INSTALL_WINDOWS.en.md](INSTALL_WINDOWS.en.md)
 在下载目录打开 PowerShell：
 
 ```powershell
-Get-FileHash .\MeetingCopilot-<版本>-win-x64.exe -Algorithm SHA256
+Get-FileHash .\MeetingBot-<版本>-win-x64.exe -Algorithm SHA256
 ```
 
 把输出的哈希和 `.sha256` 文件里的值比对，一致即可。
@@ -42,7 +42,7 @@ Get-FileHash .\MeetingCopilot-<版本>-win-x64.exe -Algorithm SHA256
 
 ## 安装（安装版）
 
-1. 双击 `MeetingCopilot-<版本>-win-x64.exe`。
+1. 双击 `MeetingBot-<版本>-win-x64.exe`。
 2. 当前是**未签名**的 Beta 版本，SmartScreen 会提示「已保护你的电脑」。确认来源后点「更多信息」→「仍要运行」。
 3. 安装器是一键式的：不会问你安装路径，直接装到**当前用户**目录（`%LOCALAPPDATA%\Programs\` 下），不写 `Program Files`，也不需要管理员权限。
 4. 自动创建开始菜单和桌面快捷方式。
@@ -56,8 +56,8 @@ Get-FileHash .\MeetingCopilot-<版本>-win-x64.exe -Algorithm SHA256
 - 想要真正的「数据也跟着走」，可以在启动前设置环境变量 `MC_USERDATA` 指向你自己的目录，例如：
 
   ```powershell
-  $env:MC_USERDATA = "D:\MeetingCopilotData"
-  .\MeetingCopilot-<版本>-win-x64-portable.exe
+  $env:MC_USERDATA = "D:\MeetingBotData"
+  .\MeetingBot-<版本>-win-x64-portable.exe
   ```
 
   这样所有配置和会话都写进那个目录。这是高级用法，日常使用不必设置。
@@ -65,6 +65,8 @@ Get-FileHash .\MeetingCopilot-<版本>-win-x64.exe -Algorithm SHA256
 ---
 
 ## 数据存在哪里
+
+应用现名为 **MeetingBot**。为兼容旧版，数据目录仍使用 `MeetingCopilot`，升级无需手动搬动资料。
 
 | 内容 | 路径 |
 |---|---|

@@ -9,7 +9,7 @@ const qa = path.resolve(root, '..', 'prompt-qa');
 if (!process.versions.electron) {
   const { spawnSync } = require('node:child_process');
   fs.mkdirSync(qa, { recursive: true });
-  const profile = path.join(qa, 'profile-' + Date.now());
+  const profile = path.join(qa, 'profile-' + Date.now(), 'MeetingCopilot');
   const env = { ...process.env, MC_PROMPT_TEST_PROFILE: profile };
   delete env.ELECTRON_RUN_AS_NODE;
   for (const phase of ['save', 'restart']) {
@@ -26,10 +26,13 @@ async function run() {
   const { app, safeStorage } = require('electron');
   const { createServer } = require('node:http');
   const profile = process.env.MC_PROMPT_TEST_PROFILE;
-  assert(profile && path.dirname(profile) === qa);
+  assert(profile && path.dirname(path.dirname(profile)) === qa);
   fs.mkdirSync(profile, { recursive: true });
-  process.env.MC_USERDATA = profile;
-  app.setPath('userData', profile);
+  // Restart uses the old directory under an isolated appData root WITHOUT the
+  // override: prove that the renamed application still loads existing data.
+  app.setPath('appData', path.dirname(profile));
+  if (process.argv[2] === 'restart') delete process.env.MC_USERDATA;
+  else { process.env.MC_USERDATA = profile; app.setPath('userData', profile); }
   app.setAppPath(root);
   const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   let win;
@@ -70,6 +73,10 @@ async function run() {
   app.on('browser-window-created', (_event, window) => { if (!win) win = window; });
   require('../out/main/index.js');
   await until(async () => win && await js('typeof window.__mcOpenSettings === "function"'), 'main UI');
+  assert.equal(app.getName(), 'MeetingBot');
+  assert.equal(app.getPath('userData'), profile);
+  assert.equal(await js('document.title'), 'MeetingBot');
+  assert.equal(await js('document.querySelector(".brand").textContent'), 'MeetingBot');
 
   async function open() {
     await js('window.__mcOpenSettings()');

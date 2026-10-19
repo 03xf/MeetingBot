@@ -18,8 +18,8 @@ The app itself is macOS-aware: the wizard, the tray, cloud transcription, AI ans
 ## Run from source
 
 ```bash
-git clone https://github.com/JWM0203/MeetingCopilot.git
-cd MeetingCopilot
+git clone https://github.com/03xf/MeetingBot.git
+cd MeetingBot
 npm install        # postinstall applies patches/ — do not remove it
 npm run build
 npm start
@@ -34,7 +34,7 @@ Windows can capture system loopback audio with no configuration. macOS cannot, s
 1. Install [BlackHole](https://github.com/ExistentialAudio/BlackHole) (2ch is enough).
 2. In *Audio MIDI Setup*, create a Multi-Output Device containing both your headphones and BlackHole, so you can still hear the meeting.
 3. Set that Multi-Output Device as the system output, or as the meeting app's output.
-4. In MeetingCopilot, set **Settings → other-party audio input** to BlackHole (the setup wizard asks for this on step 4 when it detects macOS).
+4. In MeetingBot, set **Settings → other-party audio input** to BlackHole (the setup wizard asks for this on step 4 when it detects macOS).
 5. Press "▶ Start" and confirm text appears.
 
 Full detail, including permissions and per-app routing: [docs/macos/SETUP.md](../macos/SETUP.md).
@@ -46,7 +46,7 @@ When the `.dmg` lands it will initially be **unsigned and un-notarised**, exactl
 - Gatekeeper will refuse a plain double-click. The usual workarounds are right-click → *Open* → *Open*, or removing the quarantine flag:
 
   ```bash
-  xattr -dr com.apple.quarantine /Applications/MeetingCopilot.app
+  xattr -dr com.apple.quarantine /Applications/MeetingBot.app
   ```
 
 - On first launch macOS will ask for **microphone** permission (only if you enable the mic channel) and for **screen recording** permission (only if you use screenshot Q&A).
