@@ -88,14 +88,20 @@ export function smartClip(text: string, budget: number, priority: RegExp): strin
     .join('\n\n');
 }
 
+function customInstructions(prompt?: string): string {
+  return typeof prompt === 'string' && prompt.trim() ? `【用户自定义提示词】\n${prompt.trim()}\n【用户自定义提示词结束】` : '';
+}
+
 /**
- * The BYTE-STABLE system prompt: persona + resume + JD + language directive.
+ * The BYTE-STABLE system prompt: custom instructions/persona + resume + JD + language.
  * Same inputs MUST yield the identical string (no timestamps / randomness) —
  * the LLM prewarm request and every real request share this prefix so the
  * provider's prefix cache (DeepSeek 0.1x pricing + faster prefill) hits.
  */
-export function buildStablePrefix(resume: string, jd: string, lang: AnswerLang): string {
-  const parts = [...PERSONA, ANSWER_FORMAT_RULES];
+export function buildStablePrefix(resume: string, jd: string, lang: AnswerLang, customPrompt?: string): string {
+  const custom = customInstructions(customPrompt);
+  const parts = custom ? [custom, ANSWER_FORMAT_RULES,
+    '个人经历只采用简历和个人知识库提供的事实，不编造公司、项目或数字。'] : [...PERSONA, ANSWER_FORMAT_RULES];
   const r = resume.trim();
   const j = jd.trim();
   if (r) {
@@ -114,7 +120,9 @@ export function buildStablePrefix(resume: string, jd: string, lang: AnswerLang):
       '【岗位JD结束】',
     );
   }
-  parts.push('', langDirective(lang));
+  parts.push('', custom
+    ? `自定义提示词未指定回答语言时，默认使用${lang === 'english' ? '英文' : '中文'}。`
+    : langDirective(lang));
   return parts.join('\n');
 }
 
@@ -183,6 +191,8 @@ export function buildPrewarmMessages(stablePrefix: string): ChatMessage[] {
 }
 
 export interface AnswerPromptInput {
+  /** Read from saved settings in the main process on each answer request. */
+  customPrompt?: string;
   /** Main-process retrieval, independent of per-session resume/JD. */
   knowledge?: KnowledgeContext;
   /** the sentence to answer (segment/continuous) or the text to translate */
@@ -241,10 +251,11 @@ export function buildVisionMessages(
   imageDataUrl: string,
   background?: string,
   knowledge?: KnowledgeContext,
+  customPrompt?: string,
 ): ChatMessage[] {
   const bg = (background ?? '').trim();
   const sys =
-    '你是会议助手。用户发来一张屏幕截图（通常是对方共享的 PPT/文档或一道题目）。用中文简明回答用户关于截图的问题；若是提问/题目，给出用户可以直接说的回答要点或解题思路。' +
+    (customInstructions(customPrompt) || '你是会议助手。用户发来一张屏幕截图（通常是对方共享的 PPT/文档或一道题目）。用中文简明回答用户关于截图的问题；若是提问/题目，给出用户可以直接说的回答要点或解题思路。') +
     '\n' + ANSWER_FORMAT_RULES +
     (bg
       ? `\n\n===== 本人资料与知识库（作答时优先采用） =====\n${bg.slice(0, MAX_BACKGROUND_CHARS)}\n===== 资料结束 =====`
@@ -305,7 +316,7 @@ export function buildAnswerMessages(input: AnswerPromptInput): ChatMessage[] {
     if (resume) refs.push(`【本人资料（简历）】\n${resume.slice(0, MAX_BACKGROUND_CHARS)}`);
     if (jd) refs.push(`【岗位JD】\n${jd.slice(0, MAX_BACKGROUND_CHARS)}`);
     if (context.length) refs.push(`【最近的对话转录】\n${context.join('\n')}`);
-    const msgs: ChatMessage[] = [{ role: 'system', content: ANSWER_FORMAT_RULES }];
+    const msgs: ChatMessage[] = [{ role: 'system', content: [customInstructions(input.customPrompt), ANSWER_FORMAT_RULES].filter(Boolean).join('\n\n') }];
     msgs.push(...knowledgeMessages(input.knowledge));
     if (refs.length) {
       msgs.push({ role: 'system', content: `以下资料供参考（可用可不用）：\n\n${refs.join('\n\n')}` });
@@ -316,7 +327,8 @@ export function buildAnswerMessages(input: AnswerPromptInput): ChatMessage[] {
   }
 
   // segment / continuous: teleprompter with the stable prefix
-  const msgs: ChatMessage[] = [{ role: 'system', content: buildStablePrefix(resume, jd, lang) }];
+  const custom = customInstructions(input.customPrompt);
+  const msgs: ChatMessage[] = [{ role: 'system', content: buildStablePrefix(resume, jd, lang, input.customPrompt) }];
   msgs.push(...knowledgeMessages(input.knowledge));
 
   const memo = (input.memo ?? '').trim();
@@ -333,10 +345,12 @@ export function buildAnswerMessages(input: AnswerPromptInput): ChatMessage[] {
     ? `【最近的对话转录】\n${context.join('\n')}`
     : '【最近的对话转录】（暂无）';
   const q = (input.question ?? '').trim();
-  const hint = q ? questionHint(classifyQuestion(q)) : '';
+  const hint = q && !custom ? questionHint(classifyQuestion(q)) : '';
+  const instruction = custom ? '请按照用户自定义提示词回答。' : '请直接给出我可以照着念的回答。';
+  const speaker = custom ? '对方' : '面试官';
   const ask = q
-    ? `${input.mode === 'continuous' ? '以下是用户本次确认的完整问题，可能由多段转写组成。请合并理解全部语句，覆盖其中的各个提问与补充条件，不要只回答最后一句。历史转录仅作背景，不要重复回答上轮问题。\n' : ''}面试官刚才说：\n“${q}”\n${hint ? hint + '\n' : ''}请直接给出我可以照着念的回答。`
-    : '基于上面最近的转录，面试官最新的话需要我回应。请直接给出我可以照着念的回答。';
+    ? `${input.mode === 'continuous' ? '以下是用户本次确认的完整问题，可能由多段转写组成。请合并理解全部语句，覆盖其中的各个提问与补充条件，不要只回答最后一句。历史转录仅作背景，不要重复回答上轮问题。\n' : ''}${speaker}刚才说：\n“${q}”\n${hint ? hint + '\n' : ''}${instruction}`
+    : `基于上面最近的转录，${speaker}最新的话需要我回应。${instruction}`;
 
   msgs.push({ role: 'user', content: `${contextBlock}\n\n${ask}` });
   return msgs;

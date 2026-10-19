@@ -100,6 +100,10 @@ Other title-bar controls:
 
 ---
 
+## Custom instructions
+
+Open **⚙ Settings → Custom instructions**, enter your requirements and click **Save**. The next question uses them across all sessions; they persist after restart. Existing answers are unchanged. Combined questions, single-line answers, free questions and screenshots (including multimodal answers) all carry these instructions. They replace the default interview style; clear the field to restore it. Knowledge and code formatting rules remain, while translation is unaffected. Instructions are stored locally and sent to your configured model with answer requests.
+
 ## Lost the window?
 
 The main window deliberately stays out of the taskbar, so after hiding it there are two ways back:

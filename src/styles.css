@@ -711,6 +711,7 @@ body {
 }
 
 .settings-row input,
+.settings-row textarea,
 .settings-row select {
   background: var(--input-bg);
   border: 1px solid var(--btn-border);
@@ -722,8 +723,16 @@ body {
 }
 
 .settings-row input:focus,
+.settings-row textarea:focus,
 .settings-row select:focus {
   border-color: var(--accent);
+}
+
+.settings-row textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.6;
+  font-family: inherit;
 }
 
 .settings-section {

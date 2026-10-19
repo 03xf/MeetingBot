@@ -560,7 +560,7 @@ function bootstrap(): void {
 
     /** Retrieved knowledge follows this stable prefix, so cache warming never sends the whole library. */
     function stablePrefixFor(resume?: string, jd?: string): string {
-      return buildStablePrefix(resume ?? '', jd ?? '', settings.data.llm.answerLang);
+      return buildStablePrefix(resume ?? '', jd ?? '', settings.data.llm.answerLang, settings.data.llm.customPrompt);
     }
 
     async function doPrewarm(prefix: string, reason: string): Promise<void> {
@@ -635,6 +635,7 @@ function bootstrap(): void {
     });
     ipcMain.handle(IPC.settingsSet, (_e, patch: SettingsPatch) => {
       settings.applyPatch(patch);
+      if (patch.llm?.customPrompt !== undefined) lastPrefix = null;
       if (patch.ui?.hotkeyToggle !== undefined || patch.ui?.hotkeyShot !== undefined) {
         registerHotkeys();
       }
@@ -962,6 +963,7 @@ function bootstrap(): void {
       const context = isTranslate ? undefined : knowledge.retrieve(query?.trim() || payload.recentTranscript.slice(-3).join('\n'));
       if (context) sendEv({ requestId: payload.requestId, kind: 'knowledge', knowledge: context });
       const messages = buildAnswerMessages({
+        customPrompt: settings.data.llm.customPrompt,
         knowledge: context,
         mode: payload.mode,
         question: payload.question,
@@ -1110,7 +1112,7 @@ function bootstrap(): void {
           sendEv({ requestId: payload.requestId, kind: 'knowledge', knowledge: context });
           return visionChat(
             { baseUrl: vision.baseUrl!, model: vision.model!, apiKey, proxyUrl: vision.proxyUrl },
-            buildVisionMessages(payload.question, dataUrl, payload.background, context),
+            buildVisionMessages(payload.question, dataUrl, payload.background, context, settings.data.llm.customPrompt),
             ac.signal,
           );
         })

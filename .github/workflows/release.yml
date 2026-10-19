@@ -37,6 +37,9 @@ jobs:
       - name: Python sidecar tests
         run: npm run test:python
 
+      - name: Verify saved custom instructions in actual model requests
+        run: npm run smoke:custom-prompt
+
       - name: Build installers
         run: npm run dist:win
 

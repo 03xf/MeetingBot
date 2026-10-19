@@ -1,0 +1,126 @@
+// Isolated Electron UI -> saved settings -> actual HTTP request verification.
+// Uses only fake credentials, localhost and synthetic questions, never real audio.
+const fs = require('node:fs');
+const path = require('node:path');
+const assert = require('node:assert/strict');
+const root = path.resolve(__dirname, '..');
+const qa = path.resolve(root, '..', 'prompt-qa');
+
+if (!process.versions.electron) {
+  const { spawnSync } = require('node:child_process');
+  fs.mkdirSync(qa, { recursive: true });
+  const profile = path.join(qa, 'profile-' + Date.now());
+  const env = { ...process.env, MC_PROMPT_TEST_PROFILE: profile };
+  delete env.ELECTRON_RUN_AS_NODE;
+  for (const phase of ['save', 'restart']) {
+    const result = spawnSync(require('electron'), [__filename, phase], { cwd: root, env, stdio: 'inherit', windowsHide: true, timeout: 60_000 });
+    if (result.error) throw result.error;
+    if (result.status !== 0) process.exit(result.status ?? 1);
+  }
+  console.log('[custom-prompt] UI save, real text/vision requests, immediate edit, clear and restart persistence passed');
+} else {
+  void run().catch(error => { console.error(error); require('electron').app.exit(1); });
+}
+
+async function run() {
+  const { app, safeStorage } = require('electron');
+  const { createServer } = require('node:http');
+  const profile = process.env.MC_PROMPT_TEST_PROFILE;
+  assert(profile && path.dirname(profile) === qa);
+  fs.mkdirSync(profile, { recursive: true });
+  process.env.MC_USERDATA = profile;
+  app.setPath('userData', profile);
+  app.setAppPath(root);
+  const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+  let win;
+  const js = code => win.webContents.executeJavaScript(code, true);
+  async function until(fn, label) {
+    for (let n = 0; n < 200; n++) { if (await fn()) return; await pause(40); }
+    throw Error('Timed out: ' + label);
+  }
+  const requests = [];
+  const prompt = '用自然口语详细回答，不限制字数。\n代码使用 Java。测试标记：PROMPT_SAVE_中文';
+  const edited = '修改后立即生效：PROMPT_EDIT。\n不要用第一人称，逐步解释。';
+  const timer = setTimeout(() => app.exit(1), 45_000);
+  await app.whenReady();
+  const server = createServer(async (req, res) => {
+    let raw = ''; for await (const part of req) raw += part;
+    const body = JSON.parse(raw);
+    requests.push(body);
+    if (body.stream) {
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+      res.end('data: ' + JSON.stringify({ choices: [{ delta: { content: '本地测试回答' } }] }) + '\n\ndata: [DONE]\n\n');
+    } else {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ choices: [{ message: { content: '本地测试回答' } }] }));
+    }
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const url = `http://127.0.0.1:${server.address().port}/v1`;
+  const settingsFile = path.join(profile, 'settings.json');
+  const saved = fs.existsSync(settingsFile) ? JSON.parse(fs.readFileSync(settingsFile, 'utf8')) : {};
+  if (process.argv[2] === 'restart') assert.equal(saved.llm.customPrompt, prompt);
+  const apiKeyEnc = safeStorage.isEncryptionAvailable() ? safeStorage.encryptString('fake-test-only').toString('base64') : 'plain:' + Buffer.from('fake-test-only').toString('base64');
+  fs.writeFileSync(settingsFile, JSON.stringify({ ...saved, version: 2, onboarding: { schemaVersion: 1, completed: true },
+    llm: { ...saved.llm, baseUrl: url, model: 'fake', apiKeyEnc },
+    vision: { baseUrl: url, model: 'fake-vision', apiKeyEnc },
+    asr: { backend: 'cloud', cloud: { baseUrl: url, model: 'fake', apiKeyEnc } },
+    ui: { lang: 'zh', theme: 'dark', stealth: false, hotkeyToggle: '', hotkeyShot: '' },
+  }));
+  app.on('browser-window-created', (_event, window) => { if (!win) win = window; });
+  require('../out/main/index.js');
+  await until(async () => win && await js('typeof window.__mcOpenSettings === "function"'), 'main UI');
+
+  async function open() {
+    await js('window.__mcOpenSettings()');
+    await until(() => js('!!document.querySelector("#custom-answer-prompt")'), 'prompt editor');
+  }
+  async function save(value) {
+    await open();
+    await js(`(()=>{const e=document.querySelector('#custom-answer-prompt');Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(e,${JSON.stringify(value)});e.dispatchEvent(new Event('input',{bubbles:true}));})()`);
+    await pause(50);
+    await js(`document.querySelector('.settings-actions .btn-primary').click()`);
+    await until(() => js('!document.querySelector("#custom-answer-prompt")'), 'saved');
+    assert.equal(await js('window.mc.getSettings().then(s=>s.llm.customPrompt)'), value);
+  }
+  async function ask(mode, expected, vision = false) {
+    const requestId = 'test-' + requests.length;
+    const start = requests.length;
+    await js(`new Promise((resolve,reject)=>{const off=window.mc.onLlmEvent(e=>{if(e.requestId!==${JSON.stringify(requestId)})return;if(e.kind==='done'){off();resolve(e.text)}else if(e.kind==='error'){off();reject(Error(e.message))}});window.mc.${vision ? 'shotAsk' : 'llmAsk'}(${JSON.stringify({ requestId, mode, question: '请解释缓存', freeQuestion: '请解释缓存', recentTranscript: [], ...(vision ? { imageDataUrl: 'data:image/png;base64,AAA' } : {}) })});})`);
+    const request = requests[start];
+    assert(request, 'a real HTTP request must reach the local model');
+    const system = request.messages.filter(m => m.role === 'system').map(m => m.content).join('\n');
+    if (expected) assert(system.includes(expected), 'saved custom instructions must be sent to the model');
+    else { assert(!system.includes('PROMPT_')); if (mode === 'continuous') assert(system.includes('150-350')); }
+    return request;
+  }
+  if (process.argv[2] === 'restart') {
+    await open();
+    assert.equal(await js('document.querySelector("#custom-answer-prompt").value'), prompt);
+    await js(`Array.from(document.querySelectorAll('.settings-actions button')).find(e=>e.textContent==='取消').click()`);
+    await ask('free', prompt);
+  } else {
+    await save(prompt);
+    for (const mode of ['continuous', 'segment', 'free']) await ask(mode, prompt);
+    await ask('free', prompt, true);
+    await js('window.mc.setSettings({llm:{answerWithVision:true}})');
+    const multimodal = await ask('continuous', prompt);
+    assert.equal(multimodal.model, 'fake-vision');
+    await js('window.mc.setSettings({llm:{answerWithVision:false}})');
+    await ask('translate', null);
+    await save(edited);
+    const updated = await ask('free', edited);
+    assert(!JSON.stringify(updated.messages).includes('PROMPT_SAVE'));
+    await save('');
+    await ask('continuous', null);
+    await save(prompt);
+    await open();
+    win.setSize(1180, 900);
+    await js(`document.querySelector('#custom-answer-prompt').scrollIntoView({block:'center'})`);
+    await pause(250);
+    fs.writeFileSync(path.join(qa, 'settings-preview.png'), (await win.webContents.capturePage()).toPNG());
+  }
+  clearTimeout(timer);
+  await new Promise(resolve => server.close(resolve));
+  app.quit();
+}

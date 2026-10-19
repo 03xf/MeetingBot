@@ -159,6 +159,8 @@ export interface SettingsFile {
     answerLang: AnswerLang;
     /** answer with the vision/multimodal provider instead of the text model */
     answerWithVision?: boolean;
+    /** User-authored instructions for all answers; empty uses the default persona. */
+    customPrompt?: string;
     /** encrypted-at-rest (safeStorage, base64); never exposed raw to renderer */
     apiKeyEnc?: string;
     /** catalog provider behind baseUrl+model; 'custom' when unmatched */
@@ -254,6 +256,7 @@ export interface PublicSettings {
     model: string;
     answerLang: AnswerLang;
     answerWithVision: boolean;
+    customPrompt?: string;
     apiKeySet: boolean;
     providerId?: ProviderId;
     /** last <=4 characters of the saved key — never the key itself */
@@ -317,6 +320,7 @@ export interface SettingsPatch {
     model?: string;
     answerLang?: AnswerLang;
     answerWithVision?: boolean;
+    customPrompt?: string;
     apiKey?: string;
     providerId?: ProviderId;
     verification?: ProviderVerification;

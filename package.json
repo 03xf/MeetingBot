@@ -1,6 +1,6 @@
 {
   "name": "meeting-copilot",
-  "version": "0.2.0-beta.5",
+  "version": "0.2.0-beta.6",
   "description": "Real-time meeting/interview copilot for Windows and macOS: streaming ASR (local FunASR / cloud) and first-person answers via BYOK LLM",
   "main": "./out/main/index.js",
   "author": "JWM0203",
@@ -28,6 +28,7 @@
     "smoke:asr:realtime": "node tools/rt-asr-smoke.mjs",
     "smoke:e2e:llm": "node tools/e2e-llm.mjs",
     "smoke:e2e:local": "node tools/e2e-local-lifecycle.mjs",
+    "smoke:custom-prompt": "node tools/test-custom-prompt.cjs",
     "smoke:packaged": "node tools/packaged-smoke.mjs"
   },
   "dependencies": {

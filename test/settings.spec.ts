@@ -78,6 +78,19 @@ describe('SettingsStore', () => {
     expect(onDisk).not.toContain('sk-secret-123');
   });
 
+  it('persists custom instructions, exposes them to the editor, and permits clearing', () => {
+    const s1 = new SettingsStore(file, fakeCipher);
+    expect(s1.getPublic().llm.customPrompt).toBe('');
+    const prompt = '用口语解释。\n保留所有细节和代码缩进。';
+    s1.applyPatch({ llm: { customPrompt: prompt } });
+    s1.applyPatch({ llm: { answerLang: 'english' } });
+    const s2 = new SettingsStore(file, fakeCipher);
+    expect(s2.data.llm.customPrompt).toBe(prompt);
+    expect(s2.getPublic().llm.customPrompt).toBe(prompt);
+    s2.applyPatch({ llm: { customPrompt: '' } });
+    expect(new SettingsStore(file, fakeCipher).getPublic().llm.customPrompt).toBe('');
+  });
+
   it('stores the vision key independently of the llm key', () => {
     const s = new SettingsStore(file, fakeCipher);
     s.applyPatch({ vision: { baseUrl: 'https://x/v1', model: 'qwen-vl-max', apiKey: 'sk-vision' } });

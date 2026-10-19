@@ -67,6 +67,7 @@ export function defaultSettings(platform: string = process.platform): SettingsFi
       model: 'deepseek-chat',
       answerLang: 'chinese',
       answerWithVision: false,
+      customPrompt: '',
     },
     vision: {},
     asr: {
@@ -402,6 +403,7 @@ export class SettingsStore {
         model: d.llm.model,
         answerLang: d.llm.answerLang,
         answerWithVision: !!d.llm.answerWithVision,
+        customPrompt: d.llm.customPrompt ?? '',
         apiKeySet: !!d.llm.apiKeyEnc,
         providerId: d.llm.providerId,
         apiKeyHint: d.llm.apiKeyHint,

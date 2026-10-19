@@ -43,6 +43,41 @@ describe('answer code-format guidance', () => {
   });
 });
 
+describe('custom answer instructions', () => {
+  const customPrompt = '请详细讲解，不用第一人称。\n代码使用 Java，最后给出复杂度。';
+
+  it.each(['segment', 'continuous', 'free'] as const)('includes the full custom prompt as system instructions in %s', (mode) => {
+    const messages = buildAnswerMessages({ mode, question: '设计缓存', freeQuestion: '设计缓存', recentTranscript: [], customPrompt });
+    expect(messages[0].role).toBe('system');
+    expect(messages[0].content).toContain(customPrompt);
+    expect(JSON.stringify(messages)).not.toContain('150-350');
+    expect(JSON.stringify(messages)).not.toContain('请直接给出我可以照着念的回答');
+    expect(JSON.stringify(messages)).toContain('围栏代码块');
+  });
+
+  it('uses custom instructions in screenshot answers', () => {
+    const messages = buildVisionMessages('分析这道题', 'data:image/png;base64,AAA', undefined, undefined, customPrompt);
+    expect(messages[0].content).toContain(customPrompt);
+    expect(messages[0].content).not.toContain('用中文简明回答');
+  });
+
+  it('keeps the default when empty and restores it after clearing', () => {
+    expect(buildStablePrefix('', '', 'chinese', ' \n ')).toBe(buildStablePrefix('', '', 'chinese'));
+    expect(buildStablePrefix('', '', 'chinese', '')).toContain('150-350');
+  });
+
+  it('changes the prewarm prefix with the prompt and shares it with real answers', () => {
+    const prefix = buildStablePrefix('简历', 'JD', 'chinese', customPrompt);
+    const real = buildAnswerMessages({ mode: 'continuous', recentTranscript: [], resume: '简历', jd: 'JD', customPrompt });
+    expect(buildPrewarmMessages(prefix)[0]).toEqual(real[0]);
+    expect(buildStablePrefix('简历', 'JD', 'chinese', customPrompt + '新要求')).not.toBe(prefix);
+  });
+
+  it('does not change the dedicated translation mode', () => {
+    expect(buildAnswerMessages({ mode: 'translate', question: 'hello', recentTranscript: [], customPrompt })).toEqual(buildTranslateMessages('hello'));
+  });
+});
+
 describe('SseParser', () => {
   it('parses complete events', () => {
     const p = new SseParser();

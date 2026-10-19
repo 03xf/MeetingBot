@@ -135,6 +135,7 @@ export function SettingsPanel({
   const [baseUrl, setBaseUrl] = useState(settings.llm.baseUrl);
   const [model, setModel] = useState(settings.llm.model);
   const [answerLang, setAnswerLang] = useState<AnswerLang>(settings.llm.answerLang);
+  const [customPrompt, setCustomPrompt] = useState(settings.llm.customPrompt ?? '');
   const [language, setLanguage] = useState<AsrLanguage>(settings.asr.language);
   const [hotkey, setHotkey] = useState(settings.ui.hotkeyToggle);
   const [visionBaseUrl, setVisionBaseUrl] = useState(settings.vision.baseUrl ?? '');
@@ -256,6 +257,7 @@ export function SettingsPanel({
           baseUrl: baseUrl.trim(),
           model: model.trim(),
           answerLang,
+          customPrompt,
           providerId: providerIdForEndpoint(baseUrl.trim(), model.trim(), 'text-llm'),
           ...(llmApiKey !== undefined ? { apiKey: llmApiKey } : {}),
         },
@@ -605,6 +607,19 @@ export function SettingsPanel({
           <option value="english">{t.settings.answerLangEn}</option>
         </select>
       </div>
+
+      <div className="settings-row">
+        <label htmlFor="custom-answer-prompt">{t.settings.customPromptLabel}</label>
+        <textarea
+          id="custom-answer-prompt"
+          value={customPrompt}
+          onChange={(e) => setCustomPrompt(e.target.value)}
+          placeholder={t.settings.customPromptPlaceholder}
+          rows={7}
+          spellCheck={false}
+        />
+      </div>
+      <div className="settings-hint">{t.settings.customPromptHint}</div>
 
       <div className="settings-row">
         <label>{t.settings.uiLang}</label>

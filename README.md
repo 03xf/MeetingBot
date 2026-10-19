@@ -19,7 +19,7 @@ Live transcription of the other side · first-person teleprompter answers · cap
 
 ## Download
 
-> **v0.2.0-beta.5: cut the current utterance and answer.** Click **Cut & answer** to finalize audio recorded up to this point, even before subtitles appear, and combine it with the pending question. Recognition finishes before answering. Recording continues; later audio belongs to the next question. See the [release notes (中文)](docs/releases/v0.2.0-beta.5.md). The upstream demo videos below show the older automatic answering mode, now replaced by manual confirmation.
+> **v0.2.0-beta.6: custom answer instructions.** Write and save your instructions under **Settings → Custom instructions**. Every subsequent answer includes them across all sessions, including combined questions, single-line answers, free questions and screenshots. Persists after restart; clear to restore the default style. Active audio cuts, personal knowledge and formatted code blocks remain available. See the [release notes (中文)](docs/releases/v0.2.0-beta.6.md). The upstream demos below show the older automatic answering mode, now replaced by manual confirmation.
 
 > **Personal knowledge edition:** This repository extends [JWM0203/MeetingCopilot](https://github.com/JWM0203/MeetingCopilot) with a shared, multi-document personal library, local retrieval, knowledge-first answering and inspectable reference passages. See the [personal knowledge guide (中文)](docs/user/PERSONAL_KNOWLEDGE.zh-CN.md). The Windows downloads below are built from this enhanced edition.
 
