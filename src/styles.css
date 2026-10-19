@@ -301,6 +301,8 @@ body {
 /* session bar */
 .session-bar {
   gap: 5px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
 }
 
 .session-select {
@@ -619,6 +621,17 @@ body {
 }
 
 /* ---------- settings ---------- */
+.knowledge-document { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border-soft); }
+.knowledge-document > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.knowledge-document small, .knowledge-fallback { color: var(--text-muted); }
+.knowledge-panel .settings-hint { margin: 6px 0 10px; }
+.knowledge-search { display: flex; gap: 8px; margin-top: 12px; }
+.knowledge-search input { flex: 1; min-width: 0; background: var(--input-bg); color: var(--text); border: 1px solid var(--btn-border); border-radius: 6px; padding: 7px; }
+.knowledge-sources, .knowledge-fallback { margin: 8px 10px; font-size: 11px; }
+.knowledge-sources summary, .knowledge-preview summary { cursor: pointer; color: var(--text-muted); }
+.knowledge-source, .knowledge-preview details { margin-top: 8px; padding: 8px; background: var(--turn-bg); border-radius: 6px; }
+.knowledge-source pre, .knowledge-preview pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; max-height: 180px; overflow-y: auto; user-select: text; }
+
 .settings {
   padding: 12px;
   background: var(--settings-bg);

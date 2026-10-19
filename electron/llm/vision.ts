@@ -49,10 +49,12 @@ export async function visionChat(
   messages: ChatMessage[],
   signal?: AbortSignal,
 ): Promise<string> {
+  signal?.throwIfAborted();
   const url = `${config.baseUrl.replace(/\/+$/, '')}/chat/completions`;
   const body = JSON.stringify({ model: config.model, messages, stream: false });
   const rules = toProxyRules(config.proxyUrl);
   const ses = await pickSession(rules);
+  signal?.throwIfAborted();
 
   const raw = await new Promise<{ status: number; body: string }>((resolve, reject) => {
     const req = net.request({ method: 'POST', url, session: ses });

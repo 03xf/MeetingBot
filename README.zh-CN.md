@@ -19,6 +19,8 @@
 
 ## 下载
 
+> **个人知识库增强版**：本仓库基于 [JWM0203/MeetingCopilot](https://github.com/JWM0203/MeetingCopilot)，新增跨会话多文档知识库、本地检索、知识库优先回答和参考原文展示。见 [使用说明](docs/user/PERSONAL_KNOWLEDGE.zh-CN.md)。下方下载链接指向上游发行版；使用新增功能请从本仓库源码运行。
+
 **普通用户**：下载安装包直接用——不需要 Node.js、不需要 Python、不用敲命令。
 **开发者**：跳到 [开发](#开发) 一节，从源码运行。
 
@@ -74,6 +76,8 @@
 ![设置面板](docs/settings.png)
 
 ## 功能亮点
+
+- 📚 **跨会话个人知识库**：多文档导入、中文/英文关键词检索、回答优先参考资料，未覆盖再通用补充；可预览检索并展开每条回答的参考原文。支持 MD、TXT、DOCX、文字版 PDF。见 [个人知识库使用说明](docs/user/PERSONAL_KNOWLEDGE.zh-CN.md)。
 
 - 🎧 **直接听对方的声音，不进会**：Windows 采集系统回环音频；macOS 使用可选择的音频输入（会议/系统声音可通过 BlackHole 等虚拟设备路由）。麦克风为独立通道，可单独转录你自己的发言。
 - ⚡ **四类转录后端随心切**：本地侧车（FunASR 默认；MOSS-Transcribe 0.9B 实验）· 本地 Whisper turbo（离线兜底，DirectML GPU）· 阿里云 `fun-asr-realtime`（云端逐字流式）· MiMo 按段。FunASR 说话中即出灰色实时字幕，MOSS 在停顿后整句输出。

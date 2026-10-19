@@ -4,6 +4,9 @@ import {
   type AppInfo,
   type AsrEvent,
   type KbSlot,
+  type KnowledgeSummary,
+  type KnowledgeImportResult,
+  type KnowledgeContext,
   type LlmAskPayload,
   type LlmEvent,
   type OnboardingProgressPatch,
@@ -26,8 +29,11 @@ export interface McApi {
   saveOnboardingProgress(patch: OnboardingProgressPatch): Promise<OnboardingState>;
   /** reopen the setup wizard without closing the app (settings / upgrade notice) */
   rerunOnboarding(): Promise<boolean>;
-  importKnowledge(): Promise<{ chars: number }>;
-  clearKnowledge(): Promise<{ chars: number }>;
+  importKnowledge(): Promise<KnowledgeImportResult>;
+  clearKnowledge(): Promise<KnowledgeSummary>;
+  listKnowledge(): Promise<KnowledgeSummary>;
+  removeKnowledge(id: string): Promise<KnowledgeSummary>;
+  searchKnowledge(query: string): Promise<KnowledgeContext>;
   /** pick a resume/JD document for the current session (.md/.txt/.docx/.pdf) */
   pickKnowledge(slot: KbSlot): Promise<{ name: string; text: string; chars: number } | null>;
   loadSessions(): Promise<SessionsFile>;
@@ -94,6 +100,9 @@ const api: McApi = {
   rerunOnboarding: () => ipcRenderer.invoke(IPC.onboardingRerun),
   importKnowledge: () => ipcRenderer.invoke(IPC.knowledgeImport),
   clearKnowledge: () => ipcRenderer.invoke(IPC.knowledgeClear),
+  listKnowledge: () => ipcRenderer.invoke(IPC.knowledgeList),
+  removeKnowledge: (id) => ipcRenderer.invoke(IPC.knowledgeRemove, id),
+  searchKnowledge: (query) => ipcRenderer.invoke(IPC.knowledgeSearch, query),
   pickKnowledge: (slot) => ipcRenderer.invoke(IPC.knowledgePick, slot),
   loadSessions: () => ipcRenderer.invoke(IPC.sessionsLoad),
   saveSessions: (data) => ipcRenderer.send(IPC.sessionsSave, data),

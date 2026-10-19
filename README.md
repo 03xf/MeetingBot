@@ -19,6 +19,8 @@ Live transcription of the other side · first-person teleprompter answers · cap
 
 ## Download
 
+> **Personal knowledge edition:** This repository extends [JWM0203/MeetingCopilot](https://github.com/JWM0203/MeetingCopilot) with a shared, multi-document personal library, local retrieval, knowledge-first answering and inspectable reference passages. See the [personal knowledge guide (中文)](docs/user/PERSONAL_KNOWLEDGE.zh-CN.md). Download links below refer to the upstream release; run this edition from source to use the added features.
+
 **Just want to use it?** Download the installer — no Node.js, no Python, no commands.
 **Want to hack on it?** Skip to [Development](#development) and run from source.
 

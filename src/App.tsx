@@ -24,6 +24,7 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { ServiceHealthPanel } from './components/ServiceHealthPanel';
 import { DiagnosticsPanel } from './components/DiagnosticsPanel';
 import { HelpPanel } from './components/HelpPanel';
+import { KnowledgePanel } from './components/KnowledgePanel';
 import { StatusBar } from './components/StatusBar';
 import { AnswerSession, type AnswerTurn } from './components/AnswerSession';
 import { I18nProvider, getDict, type Dict } from './i18n';
@@ -78,6 +79,7 @@ export function App() {
   const [showHealth, setShowHealth] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showKnowledge, setShowKnowledge] = useState(false);
   const [showHud, setShowHud] = useState(true);
   const [hud, setHud] = useState<HudStats>({ count: 0 });
   const [continuous, setContinuous] = useState(false);
@@ -339,6 +341,7 @@ export function App() {
           ...s,
           turns: s.turns.map((t) => {
             if (t.id !== ev.requestId) return t;
+            if (ev.kind === 'knowledge') return { ...t, knowledge: ev.knowledge };
             if (ev.kind === 'delta') return { ...t, text: t.text + ev.text };
             if (ev.kind === 'done') return { ...t, text: ev.text || t.text, status: 'done' };
             return { ...t, status: 'error', error: ev.message };
@@ -602,6 +605,7 @@ export function App() {
 
   /** the overlays are mutually exclusive: one panel at a time, never stacked */
   const closePanels = useCallback(() => {
+    setShowKnowledge(false);
     setShowSettings(false);
     setShowHealth(false);
     setShowDiagnostics(false);
@@ -851,6 +855,8 @@ export function App() {
 
       {showDiagnostics && <DiagnosticsPanel onClose={() => setShowDiagnostics(false)} />}
 
+      {showKnowledge && <KnowledgePanel onClose={() => setShowKnowledge(false)} />}
+
       {showHelp && (
         <HelpPanel
           onClose={() => setShowHelp(false)}
@@ -903,6 +909,10 @@ export function App() {
           sessions={sessions}
           currentId={currentId}
           turns={current?.turns ?? []}
+          onOpenKnowledge={() => {
+            closePanels();
+            setShowKnowledge(true);
+          }}
           resumeName={current?.resumeName}
           resumeChars={current?.resumeText?.length ?? 0}
           jdName={current?.jdName}

@@ -8,7 +8,7 @@ import type { TrayMenuLabels } from '../shared/trayMenu';
  */
 const zh = {
   regionTip: '拖动框选要识别的区域 · Esc 取消',
-  kbImportTitle: '导入个人知识库（.md / .txt）',
+  kbImportTitle: '导入个人知识库（可多选文档）',
   docFilter: '文档',
   pickResumeTitle: '导入我的简历（md/txt/docx/pdf）',
   pickJdTitle: '导入岗位JD（md/txt/docx/pdf）',
@@ -44,7 +44,7 @@ type MainDict = typeof zh;
 
 const en: MainDict = {
   regionTip: 'Drag to select a region · Esc to cancel',
-  kbImportTitle: 'Import personal knowledge base (.md / .txt)',
+  kbImportTitle: 'Import personal knowledge documents (multiple files)',
   docFilter: 'Documents',
   pickResumeTitle: 'Import my resume (md/txt/docx/pdf)',
   pickJdTitle: 'Import the job description (md/txt/docx/pdf)',

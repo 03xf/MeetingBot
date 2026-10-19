@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { KbSlot, StoredSession } from '../../shared/protocol';
+import type { KbSlot, StoredSession, KnowledgeContext } from '../../shared/protocol';
 import { useT } from '../i18n';
 
 export type TurnKind = 'segment' | 'continuous' | 'free' | 'translate' | 'vision';
@@ -11,6 +11,7 @@ export interface AnswerTurn {
   text: string;
   status: 'streaming' | 'done' | 'error';
   error?: string;
+  knowledge?: KnowledgeContext;
 }
 
 /**
@@ -41,6 +42,7 @@ export function AnswerSession({
   onClear,
   onFreeAsk,
   onShotAsk,
+  onOpenKnowledge,
 }: {
   sessions: StoredSession[];
   currentId: string;
@@ -65,6 +67,7 @@ export function AnswerSession({
   onClear: () => void;
   onFreeAsk: (question: string) => void;
   onShotAsk: (question: string, imageDataUrl?: string) => void;
+  onOpenKnowledge: () => void;
 }) {
   const t = useT();
   const boxRef = useRef<HTMLDivElement>(null);
@@ -172,6 +175,9 @@ export function AnswerSession({
           </button>
         )}
         <span className="session-spacer" />
+        <button className="btn btn-sm" onClick={onOpenKnowledge} title={t.knowledge.intro}>
+          📚{t.knowledge.title}
+        </button>
         <button className="btn btn-sm" onClick={onClear} title={t.answer.clearTitle}>
           {t.answer.clear}
         </button>
@@ -205,6 +211,19 @@ export function AnswerSession({
                   </button>
                 )}
               </div>
+              {turn.knowledge && (!!turn.knowledge.documentCount || !!turn.knowledge.error) && (
+                turn.knowledge.error ? <div className="knowledge-fallback">{t.knowledge.unavailable}</div> : turn.knowledge.sources.length ? (
+                  <details className="knowledge-sources">
+                    <summary>{t.knowledge.references(turn.knowledge.sources.length)}</summary>
+                    {turn.knowledge.sources.map((source, i) => (
+                      <div className="knowledge-source" key={`${source.documentId}-${source.chunkIndex}`}>
+                        <strong>{i + 1}. {source.documentName} · {source.chunkIndex + 1}</strong>
+                        <pre>{source.text}</pre>
+                      </div>
+                    ))}
+                  </details>
+                ) : <div className="knowledge-fallback">{t.knowledge.noMatch}</div>
+              )}
               <div className="turn-body">
                 {turn.status === 'error' ? (
                   <span className="answer-error">{turn.error}</span>

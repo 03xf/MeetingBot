@@ -269,7 +269,7 @@ export interface PublicSettings {
     apiKeyHint?: string;
     verification?: ProviderVerification;
   };
-  /** personal knowledge base (resume/notes) loaded from an .md file */
+  /** total character count of the personal document library */
   knowledge: { chars: number };
   asr: {
     language: AsrLanguage;
@@ -479,7 +479,32 @@ export interface LlmAskPayload {
   memo?: string;
 }
 
+export interface KnowledgeSource {
+  documentId: string;
+  documentName: string;
+  chunkIndex: number;
+  text: string;
+}
+
+export interface KnowledgeContext {
+  error?: 'READ_FAILED';
+  documentCount: number;
+  /** Retrieved references; the answer may only use some of them. */
+  sources: KnowledgeSource[];
+}
+
+export interface KnowledgeSummary {
+  error?: 'READ_FAILED';
+  chars: number;
+  documents: { id: string; name: string; chars: number; createdAt: number }[];
+}
+
+export interface KnowledgeImportResult extends KnowledgeSummary {
+  failures: { name: string; code: 'NO_TEXT' | 'TOO_LARGE' | 'READ_FAILED' }[];
+}
+
 export type LlmEvent =
+  | { requestId: string; kind: 'knowledge'; knowledge: KnowledgeContext }
   | { requestId: string; kind: 'delta'; text: string }
   | { requestId: string; kind: 'done'; text: string }
   | { requestId: string; kind: 'error'; message: string };
@@ -515,10 +540,13 @@ export const IPC = {
   settingsGet: 'settings:get',
   /** invoke: (SettingsPatch) => PublicSettings */
   settingsSet: 'settings:set',
-  /** invoke: () => {chars:number} — import a .md into the GLOBAL default KB (opens dialog) */
+  /** invoke: () => KnowledgeImportResult — import personal library documents (opens dialog) */
   knowledgeImport: 'knowledge:import',
-  /** invoke: () => {chars:number} — clear the global default KB */
+  /** invoke: () => KnowledgeSummary — clear the personal library */
   knowledgeClear: 'knowledge:clear',
+  knowledgeList: 'knowledge:list',
+  knowledgeRemove: 'knowledge:remove',
+  knowledgeSearch: 'knowledge:search',
   /** invoke: (KbSlot) => {name,text,chars} | null — pick a resume/JD document
    * (.md/.txt/.docx/.pdf, parsed deterministically) for the CURRENT session */
   knowledgePick: 'knowledge:pick',

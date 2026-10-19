@@ -12,6 +12,31 @@ import type { ProviderTestCode, UiLang } from '../shared/protocol';
  *  - deep engine diagnostics (they surface verbatim from the ASR/sidecar layer)
  */
 const zh = {
+  knowledge: {
+    title: '个人知识库',
+    intro: '所有会话共用：优先依据知识库回答，未覆盖的部分再补充通用知识。',
+    privacy: '资料保存在本机；回答时会将选中的参考段落发送给你配置的模型。',
+    formats: '可多选 MD、TXT、DOCX、文字版 PDF。扫描件需先转成文字。同名不同内容会保留为不同文档，可移除旧版本。',
+    limits: '单文件最多 20 MB / 200 万字符，资料库共 1000 万字符。本地按关键词检索，换一种问法可能漏检；可在下方预览。',
+    unavailable: '知识库读取失败，本次无法核对个人资料。请打开知识库检查。',
+    import: '导入文档',
+    busy: '处理中…',
+    empty: '还没有资料。导入后，手动回答、持续回答、自由提问和截图问答都会优先参考它。',
+    count: (n: number, chars: number) => `${n} 份文档 · ${chars.toLocaleString()} 字符`,
+    remove: '移除',
+    confirmRemove: '确认移除',
+    cancel: '取消',
+    close: '关闭',
+    loadError: '知识库操作失败，请重试；原有资料不会因导入失败而清空。',
+    damaged: '知识库文件无法读取，已停止导入和修改以保护原文件。请打开数据目录，备份并修复 knowledge.json 后重启。',
+    openFolder: '打开数据目录',
+    failure: (name: string, code: string) => `${name}：${code === 'NO_TEXT' ? '没有可提取的文字' : code === 'TOO_LARGE' ? '超过单文件或资料库容量限制' : '读取或保存失败'}`,
+    references: (n: number) => `本次参考资料（${n} 段，可展开核对）`,
+    noMatch: '本次未检索到参考段落，将使用通用知识补充；个人经历未知时不编造。',
+    search: '预览检索',
+    searchPlaceholder: '输入一个实际问题，看看会提供哪些资料',
+    searchHint: '预览只在本机检索，不调用模型；小型资料库会完整提供给模型。大库截图问答会先调用视觉模型提取检索主题，额外产生一次请求。',
+  },
   locale: 'zh-CN',
   uiLang: 'zh' as UiLang,
   app: {
@@ -432,6 +457,31 @@ const zh = {
 export type Dict = typeof zh;
 
 const en: Dict = {
+  knowledge: {
+    title: 'Knowledge',
+    intro: 'Shared across sessions: answer from your library first, then supplement uncovered topics with general knowledge.',
+    privacy: 'Stored locally. Selected passages are sent to your configured model when answering.',
+    formats: 'Select multiple MD, TXT, DOCX or text-based PDF files. OCR scanned files first. Different versions are kept separately; remove obsolete ones.',
+    limits: 'Up to 20 MB / 2 million characters per file, 10 million characters total. Local keyword search may miss paraphrases; preview it below.',
+    unavailable: 'The library could not be read. Personal references cannot be checked; open Knowledge to investigate.',
+    import: 'Import documents',
+    busy: 'Working…',
+    empty: 'No documents yet. Manual answers, continuous answers, free questions and screenshot answers will consult this library.',
+    count: (n: number, chars: number) => `${n} documents · ${chars.toLocaleString()} characters`,
+    remove: 'Remove',
+    confirmRemove: 'Confirm removal',
+    cancel: 'Cancel',
+    close: 'Close',
+    loadError: 'Library operation failed. Please retry; a failed import does not clear existing documents.',
+    damaged: 'The library cannot be read. Changes are disabled to preserve the original. Open the data folder, back up and repair knowledge.json, then restart.',
+    openFolder: 'Open data folder',
+    failure: (name: string, code: string) => `${name}: ${code === 'NO_TEXT' ? 'no extractable text' : code === 'TOO_LARGE' ? 'file or library capacity exceeded' : 'could not read or save'}`,
+    references: (n: number) => `Reference passages (${n}, expand to check)`,
+    noMatch: 'No reference passages retrieved. General knowledge may supplement; unknown personal facts must not be invented.',
+    search: 'Preview retrieval',
+    searchPlaceholder: 'Enter a real question to inspect its reference passages',
+    searchHint: 'Preview runs locally without a model call. Small libraries are supplied in full. Screenshot answers with larger libraries use one extra vision request to identify the search topic.',
+  },
   locale: 'en-US',
   uiLang: 'en',
   app: {
