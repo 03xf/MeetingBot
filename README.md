@@ -19,12 +19,12 @@ Live transcription of the other side · first-person teleprompter answers · cap
 
 ## Download
 
-> **Personal knowledge edition:** This repository extends [JWM0203/MeetingCopilot](https://github.com/JWM0203/MeetingCopilot) with a shared, multi-document personal library, local retrieval, knowledge-first answering and inspectable reference passages. See the [personal knowledge guide (中文)](docs/user/PERSONAL_KNOWLEDGE.zh-CN.md). Download links below refer to the upstream release; run this edition from source to use the added features.
+> **Personal knowledge edition:** This repository extends [JWM0203/MeetingCopilot](https://github.com/JWM0203/MeetingCopilot) with a shared, multi-document personal library, local retrieval, knowledge-first answering and inspectable reference passages. See the [personal knowledge guide (中文)](docs/user/PERSONAL_KNOWLEDGE.zh-CN.md). The Windows downloads below are built from this enhanced edition.
 
 **Just want to use it?** Download the installer — no Node.js, no Python, no commands.
 **Want to hack on it?** Skip to [Development](#development) and run from source.
 
-**[⬇ Get the latest release](https://github.com/JWM0203/MeetingCopilot/releases/latest)**
+**[⬇ Download the personal knowledge edition](https://github.com/03xf/MeetingCopilot-Knowledge/releases)**
 
 | File | Type | Best for |
 |---|---|---|
@@ -181,8 +181,8 @@ Place [`onnx-community/whisper-large-v3-turbo-ONNX`](https://huggingface.co/onnx
 ## Development
 
 ```bash
-git clone https://github.com/JWM0203/MeetingCopilot.git
-cd MeetingCopilot
+git clone https://github.com/03xf/MeetingCopilot-Knowledge.git
+cd MeetingCopilot-Knowledge
 npm install        # postinstall applies patches/ (transformers.js patch — do not remove)
 npm run build      # builds main + preload + renderer into out/
 npm start          # cross-platform; Windows can also use start.bat

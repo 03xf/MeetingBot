@@ -71,7 +71,7 @@ const MODEL_ID = 'onnx-community/whisper-large-v3-turbo-ONNX';
 /** tray 「检查更新」 (Phase 4). A real updater is Phase 5; until then the honest
  * answer is the releases page, opened through the same allowlist as every other
  * documentation link. */
-const RELEASES_URL = 'https://github.com/JWM0203/MeetingCopilot/releases/latest';
+const RELEASES_URL = 'https://github.com/03xf/MeetingCopilot-Knowledge/releases';
 
 /** Region-selection overlay: shows the captured screen as an opaque bg (so a
  * content-protected window never renders black locally) and lets the user drag

@@ -19,7 +19,7 @@ English version: [INSTALL_WINDOWS.en.md](INSTALL_WINDOWS.en.md)
 
 ## 下载哪个文件
 
-[Releases 页面](https://github.com/JWM0203/MeetingCopilot/releases/latest)提供两个文件：
+[Releases 页面](https://github.com/03xf/MeetingCopilot-Knowledge/releases)提供两个文件：
 
 | 文件 | 类型 | 适合 |
 |---|---|---|

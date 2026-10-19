@@ -19,12 +19,12 @@
 
 ## 下载
 
-> **个人知识库增强版**：本仓库基于 [JWM0203/MeetingCopilot](https://github.com/JWM0203/MeetingCopilot)，新增跨会话多文档知识库、本地检索、知识库优先回答和参考原文展示。见 [使用说明](docs/user/PERSONAL_KNOWLEDGE.zh-CN.md)。下方下载链接指向上游发行版；使用新增功能请从本仓库源码运行。
+> **个人知识库增强版**：本仓库基于 [JWM0203/MeetingCopilot](https://github.com/JWM0203/MeetingCopilot)，新增跨会话多文档知识库、本地检索、知识库优先回答和参考原文展示。见 [使用说明](docs/user/PERSONAL_KNOWLEDGE.zh-CN.md)。下方 Windows 安装包由本仓库的增强版源码构建。
 
 **普通用户**：下载安装包直接用——不需要 Node.js、不需要 Python、不用敲命令。
 **开发者**：跳到 [开发](#开发) 一节，从源码运行。
 
-**[⬇ 下载最新版本](https://github.com/JWM0203/MeetingCopilot/releases/latest)**
+**[⬇ 下载个人知识库增强版](https://github.com/03xf/MeetingCopilot-Knowledge/releases)**
 
 | 文件 | 类型 | 适合 |
 |---|---|---|
@@ -179,8 +179,8 @@ MOSS 是整段生成模型，不是原生流式 ASR。本应用会在一句话�
 ## 开发
 
 ```bash
-git clone https://github.com/JWM0203/MeetingCopilot.git
-cd MeetingCopilot
+git clone https://github.com/03xf/MeetingCopilot-Knowledge.git
+cd MeetingCopilot-Knowledge
 npm install        # postinstall 自动应用 patches/（transformers.js 补丁，勿删）
 npm run build      # 构建 main + preload + renderer 到 out/
 npm start          # 跨平台；Windows 也可使用 start.bat
