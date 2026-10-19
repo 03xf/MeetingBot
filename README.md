@@ -77,6 +77,8 @@ You can reopen the wizard any time from *⚙ Settings → Run the setup wizard a
 
 ## Features
 
+- 📝 **Formatted answers and code blocks** — headings, emphasis, lists and tables render normally; code keeps its indentation with syntax highlighting, line numbers, copy buttons and horizontal scrolling. Works with streamed output and stored answers.
+
 - 🎧 **Hears the other side directly — no meeting bot.** Windows captures system loopback audio. macOS uses a selectable audio input (choose a virtual device such as BlackHole for meeting/system audio). An independent microphone channel transcribes your own voice separately.
 - ⚡ **Four switchable ASR backend families** — local sidecars (FunASR by default; experimental MOSS-Transcribe 0.9B), local Whisper turbo (offline fallback, DirectML GPU), Alibaba Cloud `fun-asr-realtime`, and MiMo per-segment. FunASR provides live partials; MOSS emits a finalized utterance after a pause.
 - 🌍 **Bilingual (zh / en) out of the box** — the ASR detects Chinese↔English switches automatically mid-meeting, with no settings to touch; one click on the answer-language toggle (`A:EN`) and the teleprompter output flips to English too. Built for English interviews and code-switching conversations.

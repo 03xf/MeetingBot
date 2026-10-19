@@ -20,6 +20,13 @@ export const MAX_CONTEXT_CHARS = 2400;
 
 export type AnswerLang = 'chinese' | 'english';
 
+export const ANSWER_FORMAT_RULES = [
+  '【输出排版】使用标准 Markdown，正文可用简短标题、加粗和列表清晰组织。',
+  '所有程序代码必须单独放在三个反引号围栏代码块中，并标注语言（如 java、python、javascript、cpp）。',
+  '代码保留正常缩进、换行与空行，不压成一行，不手工添加行号；不要把整篇正文包进代码块。短变量名或表达式可用行内代码。',
+  '需要完整代码时，代码不计入口头回答字数限制；解释简短，代码完整。',
+].join('\n');
+
 /** The prompt hook that steers DeepSeek's reply language (R: 模式选择). */
 export function langDirective(lang: AnswerLang): string {
   return lang === 'english'
@@ -34,7 +41,7 @@ const PERSONA = [
   '- 全程用第一人称「我」，口语自然，让我可以一字不改地念出来；',
   '- 第一句先给结论或直接回应，再展开 2-3 个短要点；',
   '- 全文控制在 30-60 秒内可念完（约 150-350 字）；',
-  '- 不用 Markdown 标题、编号、加粗等书面格式，分点直接换行；',
+  '- 普通口头回答保持简洁自然；讲解步骤或展示代码时，可用清晰的 Markdown 排版；',
   '- 行为/经历类问题按 STAR 展开：情境→任务→行动→结果；',
   '- 技术类问题先一句话讲思路，再给关键点，必要时给复杂度或对比结论；',
   '- 个人经历只能使用【简历】或【个人知识库】提供的事实，绝不编造未提供的公司、项目、数字；',
@@ -88,7 +95,7 @@ export function smartClip(text: string, budget: number, priority: RegExp): strin
  * provider's prefix cache (DeepSeek 0.1x pricing + faster prefill) hits.
  */
 export function buildStablePrefix(resume: string, jd: string, lang: AnswerLang): string {
-  const parts = [...PERSONA];
+  const parts = [...PERSONA, ANSWER_FORMAT_RULES];
   const r = resume.trim();
   const j = jd.trim();
   if (r) {
@@ -238,6 +245,7 @@ export function buildVisionMessages(
   const bg = (background ?? '').trim();
   const sys =
     '你是会议助手。用户发来一张屏幕截图（通常是对方共享的 PPT/文档或一道题目）。用中文简明回答用户关于截图的问题；若是提问/题目，给出用户可以直接说的回答要点或解题思路。' +
+    '\n' + ANSWER_FORMAT_RULES +
     (bg
       ? `\n\n===== 本人资料与知识库（作答时优先采用） =====\n${bg.slice(0, MAX_BACKGROUND_CHARS)}\n===== 资料结束 =====`
       : '');
@@ -297,7 +305,7 @@ export function buildAnswerMessages(input: AnswerPromptInput): ChatMessage[] {
     if (resume) refs.push(`【本人资料（简历）】\n${resume.slice(0, MAX_BACKGROUND_CHARS)}`);
     if (jd) refs.push(`【岗位JD】\n${jd.slice(0, MAX_BACKGROUND_CHARS)}`);
     if (context.length) refs.push(`【最近的对话转录】\n${context.join('\n')}`);
-    const msgs: ChatMessage[] = [];
+    const msgs: ChatMessage[] = [{ role: 'system', content: ANSWER_FORMAT_RULES }];
     msgs.push(...knowledgeMessages(input.knowledge));
     if (refs.length) {
       msgs.push({ role: 'system', content: `以下资料供参考（可用可不用）：\n\n${refs.join('\n\n')}` });

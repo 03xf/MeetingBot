@@ -30,6 +30,19 @@ import {
   RESUME_PRIORITY,
 } from '../electron/llm/prompts';
 
+describe('answer code-format guidance', () => {
+  it.each(['segment', 'continuous', 'free'] as const)('requests labeled, indented code blocks in %s answers', (mode) => {
+    const messages = buildAnswerMessages({ mode, question: '写两数之和', freeQuestion: '写两数之和', recentTranscript: [] });
+    expect(JSON.stringify(messages)).toContain('围栏代码块');
+    expect(JSON.stringify(messages)).toContain('不手工添加行号');
+  });
+
+  it('applies formatting to screenshot answers without altering translation instructions', () => {
+    expect(JSON.stringify(buildVisionMessages('写代码', 'data:image/png;base64,AAA'))).toContain('围栏代码块');
+    expect(JSON.stringify(buildAnswerMessages({ mode: 'translate', question: 'hello', recentTranscript: [] }))).not.toContain('围栏代码块');
+  });
+});
+
 describe('SseParser', () => {
   it('parses complete events', () => {
     const p = new SseParser();
@@ -108,10 +121,12 @@ describe('buildAnswerMessages', () => {
       freeQuestion: '帮我总结一下刚才的对话',
       recentTranscript: [],
     });
-    // no context/KB => no system prompt at all, just the raw question
-    expect(msgs).toHaveLength(1);
-    expect(msgs[0].role).toBe('user');
-    expect(msgs[0].content).toBe('帮我总结一下刚才的对话');
+    // Formatting guidance applies to free answers without adding an interview persona.
+    expect(msgs).toHaveLength(2);
+    expect(msgs[0].role).toBe('system');
+    expect(msgs[0].content).toContain('围栏代码块');
+    expect(msgs[1].role).toBe('user');
+    expect(msgs[1].content).toBe('帮我总结一下刚才的对话');
   });
 
   it('free mode does NOT inject the meeting-assistant persona (truthful model identity)', () => {

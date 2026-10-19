@@ -106,6 +106,7 @@ const zh = {
     answerSelection: '⚡回答选中',
   },
   answer: {
+    code: { code: '代码', copy: '复制代码', copied: '已复制', failed: '复制失败，请重试' },
     kindTag: {
       segment: '答',
       continuous: '持续',
@@ -554,6 +555,7 @@ const en: Dict = {
     answerSelection: '⚡ Answer selection',
   },
   answer: {
+    code: { code: 'Code', copy: 'Copy code', copied: 'Copied', failed: 'Copy failed; retry' },
     kindTag: {
       segment: 'Ans',
       continuous: 'Auto',

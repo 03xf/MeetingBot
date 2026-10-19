@@ -78,6 +78,13 @@
 
   --hud-text: #cfd5e1;
   --scrollbar: rgba(255, 255, 255, 0.15);
+  --code-bg: #151a22;
+  --code-gutter: #1c2330;
+  --code-keyword: #ff7b92;
+  --code-string: #a5d6ff;
+  --code-number: #79c0ff;
+  --code-title: #d2a8ff;
+  --code-comment: #8b98aa;
 }
 
 :root[data-font-scale='small'] {
@@ -153,6 +160,13 @@
 
   --hud-text: #333c4d;
   --scrollbar: rgba(0, 0, 0, 0.22);
+  --code-bg: #f8f9fb;
+  --code-gutter: #eef1f5;
+  --code-keyword: #cf222e;
+  --code-string: #0550ae;
+  --code-number: #0969da;
+  --code-title: #8250df;
+  --code-comment: #6e7781;
 }
 
 html,
@@ -529,6 +543,8 @@ body {
 }
 
 .turn {
+  flex-shrink: 0;
+  min-width: 0;
   background: var(--turn-bg);
   border: 1px solid var(--turn-border);
   border-left: 3px solid var(--accent);
@@ -584,6 +600,39 @@ body {
 .answer-error {
   color: var(--error-text);
 }
+
+.answer-markdown { white-space: normal; overflow-wrap: anywhere; }
+.answer-markdown p { margin: 0.55em 0; white-space: pre-wrap; }
+.answer-markdown > :first-child { margin-top: 0; }
+.answer-markdown > :last-child { margin-bottom: 0; }
+.answer-markdown h1, .answer-markdown h2, .answer-markdown h3,
+.answer-markdown h4, .answer-markdown h5, .answer-markdown h6 { font-size: 1.08em; line-height: 1.45; margin: 0.9em 0 0.4em; color: var(--text); }
+.answer-markdown h1 { font-size: 1.2em; }
+.answer-markdown strong { font-weight: 650; color: var(--text); }
+.answer-markdown ul, .answer-markdown ol { padding-left: 1.5em; margin: 0.5em 0; }
+.answer-markdown li { margin: 0.25em 0; }
+.answer-markdown li > p { margin: 0.25em 0; }
+.answer-markdown blockquote { border-left: 3px solid var(--accent); padding-left: 0.8em; color: var(--text-muted); margin: 0.65em 0; }
+.answer-markdown hr { border: 0; border-top: 1px solid var(--border-1); margin: 0.8em 0; }
+.answer-markdown a { color: var(--accent-text); text-decoration: underline; }
+.answer-markdown :not(pre) > code { font: 0.9em Consolas, 'Cascadia Code', 'SFMono-Regular', monospace; background: var(--surface); border: 1px solid var(--border-soft); border-radius: 4px; padding: 1px 4px; }
+.answer-table-scroll { overflow-x: auto; margin: 0.6em 0; }
+.answer-table-scroll table { border-collapse: collapse; font-size: 0.9em; }
+.answer-table-scroll th, .answer-table-scroll td { border: 1px solid var(--border-1); padding: 5px 9px; text-align: left; }
+.answer-table-scroll th { background: var(--surface); }
+.answer-code-block { margin: 0.7em 0; border: 1px solid var(--btn-border); border-radius: 8px; overflow: hidden; background: var(--code-bg); }
+.answer-code-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 10px; background: var(--code-gutter); border-bottom: 1px solid var(--border-1); user-select: none; }
+.answer-code-language { font: 11px Consolas, monospace; text-transform: uppercase; color: var(--text-muted); }
+.answer-code-scroll { display: flex; align-items: stretch; overflow: auto; max-height: 480px; }
+.answer-code-scroll pre, .answer-code-scroll code { margin: 0; border: 0; border-radius: 0; background: none; white-space: pre; overflow-wrap: normal; word-break: normal; tab-size: 4; font: 13px/1.65 Consolas, 'Cascadia Code', 'SFMono-Regular', monospace; }
+.answer-code-scroll pre { padding: 12px; }
+.answer-code-scroll .answer-code-gutter { position: sticky; left: 0; flex-shrink: 0; z-index: 1; text-align: right; color: var(--text-muted); background: var(--code-gutter); border-right: 1px solid var(--border-1); user-select: none; pointer-events: none; }
+.answer-code-content { flex: 1 0 auto; color: var(--text-body); }
+.answer-code-content .hljs-keyword, .answer-code-content .hljs-selector-tag, .answer-code-content .hljs-literal { color: var(--code-keyword); }
+.answer-code-content .hljs-string, .answer-code-content .hljs-regexp, .answer-code-content .hljs-attr { color: var(--code-string); }
+.answer-code-content .hljs-number, .answer-code-content .hljs-built_in, .answer-code-content .hljs-type { color: var(--code-number); }
+.answer-code-content .hljs-title, .answer-code-content .hljs-function { color: var(--code-title); }
+.answer-code-content .hljs-comment, .answer-code-content .hljs-quote { color: var(--code-comment); }
 
 .cursor {
   animation: blink 1s step-start infinite;

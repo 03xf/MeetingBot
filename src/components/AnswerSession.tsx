@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { KbSlot, StoredSession, KnowledgeContext } from '../../shared/protocol';
 import { useT } from '../i18n';
+import { AnswerMarkdown } from './AnswerMarkdown';
 
 export type TurnKind = 'segment' | 'continuous' | 'free' | 'translate' | 'vision';
 
@@ -229,7 +230,7 @@ export function AnswerSession({
                   <span className="answer-error">{turn.error}</span>
                 ) : (
                   <>
-                    {turn.text || (turn.kind === 'vision' ? t.answer.visionWaiting : t.answer.genWaiting)}
+                    {turn.text ? <AnswerMarkdown text={turn.text} labels={t.answer.code} /> : (turn.kind === 'vision' ? t.answer.visionWaiting : t.answer.genWaiting)}
                     {turn.status === 'streaming' && <span className="cursor">▍</span>}
                   </>
                 )}
