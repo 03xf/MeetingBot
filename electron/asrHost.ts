@@ -25,6 +25,7 @@ export interface AsrHostOptions {
 export class AsrHost {
   private child: Electron.UtilityProcess | null = null;
   private listeners = new Set<(ev: AsrEvent) => void>();
+  private cuts = new Set<string>();
   /** replayed to late-attaching windows */
   lastReady: AsrEvent | null = null;
   lastStatus: AsrEvent | null = null;
@@ -54,7 +55,12 @@ export class AsrHost {
     child.stderr?.on('data', (d: Buffer) => process.stderr.write(d));
 
     child.on('message', (msg: WorkerOutMessage) => {
+      if (this.child !== child) return;
       switch (msg.type) {
+        case 'cut':
+          this.cuts.delete(msg.requestId);
+          this.emit({ kind: 'cut', requestId: msg.requestId, error: msg.error });
+          break;
         case 'ready':
           this.emit({ kind: 'ready', loadMs: msg.loadMs, warmMs: msg.warmMs, ep: msg.ep, gpuSuspect: msg.gpuSuspect });
           break;
@@ -87,6 +93,8 @@ export class AsrHost {
       }
     });
     child.on('exit', (code) => {
+      if (this.child !== child) return;
+      this.failCuts(`ASR process exited (${code})`);
       if (code !== 0) {
         this.emit({ kind: 'error', message: `asr process exited with code ${code}`, fatal: true });
       }
@@ -122,7 +130,22 @@ export class AsrHost {
     this.send({ type: 'flush' });
   }
 
+  cut(requestId: string): void {
+    if (!this.child || !this.lastReady || this.lastStatus?.kind === 'status' && this.lastStatus.state === 'loading') {
+      this.emit({ kind: 'cut', requestId, error: 'ASR is not ready' });
+      return;
+    }
+    this.cuts.add(requestId);
+    this.send({ type: 'cut', requestId });
+  }
+
+  private failCuts(error: string): void {
+    for (const requestId of this.cuts) this.emit({ kind: 'cut', requestId, error });
+    this.cuts.clear();
+  }
+
   async stop(): Promise<void> {
+    this.failCuts('ASR was stopped or reconfigured');
     const child = this.child;
     if (!child) return;
     this.child = null;

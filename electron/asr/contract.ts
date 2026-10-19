@@ -41,7 +41,7 @@ export interface WorkerShutdown {
   type: 'shutdown';
 }
 
-export type WorkerInMessage = WorkerInit | WorkerPcm | WorkerConfig | WorkerFlush | WorkerShutdown;
+export type WorkerInMessage = WorkerInit | WorkerPcm | WorkerConfig | WorkerFlush | WorkerShutdown | { type: 'cut'; requestId: string };
 
 // ---- worker -> main ----
 
@@ -86,6 +86,7 @@ export interface WorkerError {
 }
 
 export type WorkerOutMessage =
+  | { type: 'cut'; requestId: string; error?: string }
   | WorkerReady
   | WorkerSegment
   | WorkerPartial

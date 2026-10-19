@@ -173,13 +173,13 @@ export class VadSegmenter {
   }
 
   /** Force-close any open segment (capture stopped). */
-  flush(): VadEvent[] {
+  flush(keepShort = false): VadEvent[] {
     if (!this.inSpeech) return [];
-    const ev = this.close('flush');
+    const ev = this.close('flush', keepShort);
     return ev ? [ev] : [];
   }
 
-  private close(reason: 'silence' | 'maxlen' | 'flush'): VadEvent | null {
+  private close(reason: 'silence' | 'maxlen' | 'flush', keepShort = false): VadEvent | null {
     const o = this.opts;
     const chunks = this.seg;
     const startTs = this.segStartTs;
@@ -194,7 +194,7 @@ export class VadSegmenter {
     this.preRoll = [];
     this.preRollMsHeld = 0;
 
-    if (speechMs < o.minSpeechMs) return null;
+    if (!keepShort && speechMs < o.minSpeechMs) return null;
 
     const total = chunks.reduce((a, c) => a + c.pcm.length, 0);
     const pcm = new Float32Array(total);

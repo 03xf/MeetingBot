@@ -630,6 +630,9 @@ function bootstrap(): void {
     // pull-based replay: renderer asks after subscribing, so instant-ready
     // cloud engines can't race the subscription (stuck "模型加载中" bug)
     ipcMain.handle(IPC.asrReplay, () => ({ ready: asr.lastReady, status: asr.lastStatus }));
+    ipcMain.on(IPC.asrCut, (_e, requestId: string) => {
+      if (typeof requestId === 'string' && requestId.length <= 128) asr.cut(requestId);
+    });
     ipcMain.handle(IPC.settingsSet, (_e, patch: SettingsPatch) => {
       settings.applyPatch(patch);
       if (patch.ui?.hotkeyToggle !== undefined || patch.ui?.hotkeyShot !== undefined) {

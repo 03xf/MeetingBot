@@ -107,6 +107,8 @@ export function App() {
   const loaded = useRef(false);
   const partialsRef = useRef<{ them?: string; me?: string }>({});
   const waitingRef = useRef<string | null>(null);
+  const cutRef = useRef<{ requestId: string; sid: string; epoch: number } | null>(null);
+  const submitQuestionRef = useRef<() => void>(() => {});
 
   // UI language: settings-driven; ref mirror so stable callbacks stay fresh
   const t = getDict(settings?.ui.lang);
@@ -263,6 +265,7 @@ export function App() {
     },
     [appendTurn, currentMaterial, maybeTitle],
   );
+  submitQuestionRef.current = () => askLlm('continuous');
 
   /** region screenshot flow (📷 button or hotkey): drag a region, then ask */
   const doRegionShot = useCallback(async () => {
@@ -293,7 +296,23 @@ export function App() {
     });
 
     const handleAsrEvent = (ev: AsrEvent) => {
-      if (ev.kind === 'ready') {
+      if (ev.kind === 'cut') {
+        const cut = cutRef.current;
+        if (!cut || cut.requestId !== ev.requestId) return;
+        cutRef.current = null;
+        partialsRef.current = { ...partialsRef.current, them: undefined };
+        setPartials(partialsRef.current);
+        const session = sessionsRef.current.find((s) => s.id === cut.sid);
+        const shouldSubmit = waitingRef.current === cut.sid && currentIdRef.current === cut.sid &&
+          !!session && (session.questionEpoch ?? 0) === cut.epoch;
+        waitForFinal(null);
+        if (ev.error) {
+          setAsr((s) => ({ ...s, lastError: tRef.current.question.cutFailed(ev.error!) }));
+          return;
+        }
+        // The worker emits this before releasing any post-cut audio results.
+        if (shouldSubmit) submitQuestionRef.current();
+      } else if (ev.kind === 'ready') {
         setAsr((s) => ({ ...s, phase: 'ready', ep: ev.ep, gpuSuspect: ev.gpuSuspect, workerState: 'listening' }));
       } else if (ev.kind === 'status') {
         setAsr((s) => ({ ...s, workerState: ev.state }));
@@ -317,10 +336,11 @@ export function App() {
           p95: percentile(e2eSamples.current, 95),
           count: e2eSamples.current.length,
         });
-        const sid = currentIdRef.current;
+        const cut = ev.speaker === 'them' ? cutRef.current : null;
+        const sid = cut?.sid ?? currentIdRef.current;
         updateSessions((list) =>
           list.map((s) =>
-            s.id === sid
+            s.id === sid && (!cut || (s.questionEpoch ?? 0) === cut.epoch)
               ? collectQuestionSegment(s, {
                     // NOT ev.id: the worker counter resets per engine rebuild,
                     // duplicating ids inside a persisted session
@@ -429,16 +449,6 @@ export function App() {
     if (!loaded.current || !currentId) return;
     prewarm(false);
   }, [currentId, prewarm]);
-
-  // A click while live text is still being revised waits for its final segment.
-  // This is a single pending confirmation, never a timer or an automatic mode.
-  useEffect(() => {
-    if (!waitingConfirmation || waitingRef.current !== waitingConfirmation) return;
-    if (waitingConfirmation !== currentId) { waitForFinal(null); return; }
-    if (partialsRef.current.them?.trim()) return;
-    waitForFinal(null);
-    askLlm('continuous');
-  }, [waitingConfirmation, currentId, partials, askLlm, waitForFinal]);
 
   // Windows: Electron system loopback. macOS/Linux: selected ordinary input
   // (typically a virtual audio device for meeting/system audio).
@@ -751,14 +761,27 @@ export function App() {
   const questionBusy = !!current && hasPendingAnswer(current);
   const questionCount = current?.pendingQuestion?.length ?? 0;
   const waiting = waitingConfirmation === currentId;
-  const confirmDisabled = !answersReady || questionBusy || (!questionCount && !partials.them?.trim());
+  const confirmDisabled = !answersReady || questionBusy ||
+    (!questionCount && !partials.them?.trim() && !capturing && asr.workerState !== 'speech' && asr.workerState !== 'transcribing');
   const confirmQuestion = useCallback(() => {
     if (waitingRef.current) { waitForFinal(null); return; }
     const s = sessionsRef.current.find((s) => s.id === currentIdRef.current);
     if (!answersReady || !s || hasPendingAnswer(s)) return;
-    if (partialsRef.current.them?.trim()) { waitForFinal(s.id); return; }
-    askLlm('continuous');
-  }, [answersReady, askLlm, waitForFinal]);
+    if (cutRef.current) {
+      setAsr((state) => ({ ...state, lastError: tRef.current.question.stillCutting }));
+      return;
+    }
+    const requestId = uid('cut');
+    cutRef.current = { requestId, sid: s.id, epoch: s.questionEpoch ?? 0 };
+    waitForFinal(s.id);
+    const cap = captureKindForPlatform(window.mc.platform) === 'input' ? themInputRef.current! : loopbackRef.current!;
+    void cap.cut(requestId, () => window.mc.asrCut(requestId)).catch((error: unknown) => {
+      if (cutRef.current?.requestId !== requestId) return;
+      cutRef.current = null;
+      waitForFinal(null);
+      setAsr((state) => ({ ...state, lastError: tRef.current.question.cutFailed(String(error)) }));
+    });
+  }, [answersReady, waitForFinal]);
 
   return (
     <I18nProvider lang={settings?.ui.lang}>

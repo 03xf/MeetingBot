@@ -412,6 +412,7 @@ export interface AsrPartialEvent {
 }
 
 export type AsrEvent =
+  | { kind: 'cut'; requestId: string; error?: string }
   | AsrSegmentEvent
   | AsrPartialEvent
   | AsrReadyEvent
@@ -554,6 +555,8 @@ export const IPC = {
    * Cloud engines are ready in ms, BEFORE React subscribes; push-replay on
    * did-finish-load still races the subscription, so the renderer pulls. */
   asrReplay: 'asr:replay',
+  /** Seal received other-party audio; worker emits cut after all earlier results. */
+  asrCut: 'asr:cut',
   /** invoke: () => PublicSettings */
   settingsGet: 'settings:get',
   /** invoke: (SettingsPatch) => PublicSettings */

@@ -78,8 +78,11 @@ class AliyunRtSession implements StreamingSession {
   private readonly taskId = randomUUID();
   private started = false;
   private dead = false;
+  private closing = false;
   private pending: Buffer[] = [];
   private finishResolve: (() => void) | null = null;
+  private finishReject: ((error: Error) => void) | null = null;
+  private closePromise: Promise<void> | null = null;
 
   constructor(
     cfg: CloudAsrConfig,
@@ -119,9 +122,10 @@ class AliyunRtSession implements StreamingSession {
       if (!kind) return;
       if (kind === 'task-started') {
         this.started = true;
-        this.cb.onReady?.();
         for (const b of this.pending) this.ws.send(b);
         this.pending = [];
+        if (this.closing) this.sendFinish();
+        this.cb.onReady?.();
       } else if (kind === 'result-generated') {
         const s = ev!.payload?.output?.sentence;
         if (!s || s.heartbeat) return;
@@ -133,6 +137,7 @@ class AliyunRtSession implements StreamingSession {
           this.cb.onPartial(text);
         }
       } else if (kind === 'task-finished') {
+        this.dead = true;
         this.settleFinish();
         this.ws.close();
       } else if (kind === 'task-failed') {
@@ -144,14 +149,17 @@ class AliyunRtSession implements StreamingSession {
     this.ws.on('error', (e) => this.fail(`ws error: ${e.message}`));
     this.ws.on('close', () => {
       // close without task-finished while we still expect results = failure
-      if (!this.dead && this.finishResolve) this.settleFinish();
+      if (!this.dead) this.fail('connection closed before task-finished');
     });
   }
 
   private fail(message: string): void {
     if (this.dead) return;
     this.dead = true;
-    this.settleFinish();
+    const reject = this.finishReject;
+    this.finishReject = null;
+    this.finishResolve = null;
+    reject?.(new Error(message));
     try {
       this.ws.terminate();
     } catch {
@@ -163,43 +171,45 @@ class AliyunRtSession implements StreamingSession {
   private settleFinish(): void {
     const r = this.finishResolve;
     this.finishResolve = null;
+    this.finishReject = null;
     r?.();
   }
 
   push(pcm: Float32Array): void {
-    if (this.dead || pcm.length === 0) return;
+    if (this.dead || this.closing || pcm.length === 0) return;
     const buf = f32ToPcm16(pcm);
     if (this.started && this.ws.readyState === WebSocket.OPEN) this.ws.send(buf);
     else this.pending.push(buf);
   }
 
-  async close(): Promise<void> {
-    if (this.dead) return;
-    this.dead = true;
-    if (this.ws.readyState !== WebSocket.OPEN || !this.started) {
-      // never got going — just tear down
-      try {
-        this.ws.terminate();
-      } catch {
-        /* noop */
-      }
-      return;
-    }
+  private sendFinish(): void {
     const finishTask = {
       header: { action: 'finish-task', task_id: this.taskId, streaming: 'duplex' },
       payload: { input: {} },
     };
-    const finished = new Promise<void>((res) => {
-      this.finishResolve = res;
-    });
     this.ws.send(JSON.stringify(finishTask));
-    const timeout = new Promise<void>((res) => setTimeout(res, FINISH_TIMEOUT_MS).unref?.());
-    await Promise.race([finished, timeout]);
-    try {
+  }
+
+  close(): Promise<void> {
+    if (this.closePromise) return this.closePromise;
+    if (this.dead) return Promise.reject(new Error('ASR session is already closed'));
+    this.closing = true;
+    this.closePromise = new Promise<void>((resolve, reject) => {
+      this.finishResolve = resolve;
+      this.finishReject = reject;
+    });
+    // A confirmation can arrive before task-started. Keep the connection and
+    // queued audio alive; task-started will send audio first, then finish-task.
+    const timer = setTimeout(() => this.fail('ASR finalization timed out'), FINISH_TIMEOUT_MS);
+    timer.unref?.();
+    this.closePromise = this.closePromise.finally(() => {
+      clearTimeout(timer);
+      this.dead = true;
+      this.pending = [];
       this.ws.terminate();
-    } catch {
-      /* noop */
-    }
+    });
+    if (this.started && this.ws.readyState === WebSocket.OPEN) this.sendFinish();
+    return this.closePromise;
   }
 }
 

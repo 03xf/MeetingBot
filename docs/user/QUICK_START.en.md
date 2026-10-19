@@ -84,8 +84,8 @@ Review the summary and click "Enter MeetingCopilot". The wizard writes the whole
 
 1. Play something with speech in it (a meeting, a video, a podcast).
 2. Click **▶ Start** in the title bar; the Transcript pane on the left starts filling.
-3. Wait until the question is complete, then click **Confirm answer** to combine all other-party speech received since the last confirmation. Your microphone transcript is excluded.
-4. Preview the pending question in the left pane. Recording continues while answering, and new speech stays queued for the next question. Failed or cancelled answers return to the queue. Single-line **⚡Ans** and selected-text answers do not advance this queue. A confirmation during live text waits for the current segment to finalize; this wait can be cancelled.
+3. Click **Cut & answer** to combine all other-party speech since the last submission. If an utterance is still in progress, the app actively finalizes its recorded portion and includes it even before subtitles appear. Recognition finishes before answering. Your microphone transcript is excluded; pauses never trigger answers.
+4. Preview finalized pending segments in the left pane; the current utterance is added after cut recognition finishes. Recording continues, and audio after the boundary belongs to the next question. **Cancel submission** cancels the answer, keeps recognized speech pending and preserves the boundary. Failed or cancelled answers return to the queue. Single-line **⚡Ans** and selected-text answers do not advance this queue. The service still needs time to recognize audio; cutting mid-word may reduce accuracy. Recognition failure prevents incomplete submission.
 5. For answers grounded in your experience, import material with **📄Resume** / **📋JD** (`.md/.txt/.docx/.pdf`). Parsing is local; the text is only sent to the LLM you configured, and only as context for a question you asked.
 
 Other title-bar controls:

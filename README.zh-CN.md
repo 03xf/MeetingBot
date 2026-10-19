@@ -19,14 +19,14 @@
 
 ## 下载
 
-> **v0.2.0-beta.4：自动归并问题＋手动确认回答**。持续转写，点「确认回答」合并上次确认后的所有对方语句；回答期间的新语句留给下一轮。见 [版本说明](docs/releases/v0.2.0-beta.4.md)。下方演示视频来自上游旧版本，自动触发回答现已替换为手动确认。
+> **v0.2.0-beta.5：截到此刻并回答**。点击会主动结束当前半句的识别，即使还没出现字幕，也会把已录到的部分与待确认问题合并，识别完成后回答。录音持续运行，截断后的音频进入下一轮。见 [版本说明](docs/releases/v0.2.0-beta.5.md)。下方演示视频来自上游旧版本，自动触发回答现已替换为手动确认。
 
 > **个人知识库增强版**：本仓库基于 [JWM0203/MeetingCopilot](https://github.com/JWM0203/MeetingCopilot)，新增跨会话多文档知识库、本地检索、知识库优先回答和参考原文展示。见 [使用说明](docs/user/PERSONAL_KNOWLEDGE.zh-CN.md)。下方 Windows 安装包由本仓库的增强版源码构建。
 
 **普通用户**：下载安装包直接用——不需要 Node.js、不需要 Python、不用敲命令。
 **开发者**：跳到 [开发](#开发) 一节，从源码运行。
 
-**[⬇ 下载个人知识库增强版](https://github.com/03xf/MeetingCopilot-Knowledge/releases)**
+**[⬇ 下载个人知识库增强版](https://github.com/03xf/MeetingBot/releases)**
 
 | 文件 | 类型 | 适合 |
 |---|---|---|
@@ -183,8 +183,8 @@ MOSS 是整段生成模型，不是原生流式 ASR。本应用会在一句话�
 ## 开发
 
 ```bash
-git clone https://github.com/03xf/MeetingCopilot-Knowledge.git
-cd MeetingCopilot-Knowledge
+git clone https://github.com/03xf/MeetingBot.git
+cd MeetingBot
 npm install        # postinstall 自动应用 patches/（transformers.js 补丁，勿删）
 npm run build      # 构建 main + preload + renderer 到 out/
 npm start          # 跨平台；Windows 也可使用 start.bat

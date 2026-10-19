@@ -3,6 +3,8 @@
  * setDisplayMediaRequestHandler answers with { audio: 'loopback' }, so this
  * captures the system mix without any native module (PLAN §4.2).
  */
+import { cutCapture } from './cutCapture';
+
 export class LoopbackCapture {
   private ctx: AudioContext | null = null;
   private stream: MediaStream | null = null;
@@ -26,7 +28,7 @@ export class LoopbackCapture {
     const source = ctx.createMediaStreamSource(stream);
     const node = new AudioWorkletNode(ctx, 'pcm-worklet');
     node.port.onmessage = (e: MessageEvent<ArrayBuffer>) => {
-      onPcm(e.data, Date.now());
+      if (e.data instanceof ArrayBuffer) onPcm(e.data, Date.now());
     };
     // A worklet node is only pulled when connected towards the destination;
     // route through a zero gain so nothing is audible.
@@ -51,5 +53,9 @@ export class LoopbackCapture {
       await this.ctx.close().catch(() => undefined);
       this.ctx = null;
     }
+  }
+
+  cut(requestId: string, onCut: () => void): Promise<void> {
+    return cutCapture(this.node, requestId, onCut);
   }
 }

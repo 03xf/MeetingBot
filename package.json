@@ -1,13 +1,13 @@
 {
   "name": "meeting-copilot",
-  "version": "0.2.0-beta.4",
+  "version": "0.2.0-beta.5",
   "description": "Real-time meeting/interview copilot for Windows and macOS: streaming ASR (local FunASR / cloud) and first-person answers via BYOK LLM",
   "main": "./out/main/index.js",
   "author": "JWM0203",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/03xf/MeetingCopilot-Knowledge.git"
+    "url": "https://github.com/03xf/MeetingBot.git"
   },
   "private": true,
   "scripts": {
@@ -19,7 +19,7 @@
     "test:python": "node tools/run-python-tests.mjs",
     "test:all": "npm test && npm run test:python",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
-    "verify": "npm run typecheck && npm test && npm run build",
+    "verify": "npm run typecheck && npm test && npm run build && node tools/test-asr-cut.mjs",
     "verify:patched": "node tools/verify-patched.mjs",
     "dist:dir": "npm run build && npm run verify:patched && electron-builder --dir",
     "dist:win": "npm run build && npm run verify:patched && electron-builder --win nsis portable --publish never",

@@ -62,7 +62,11 @@ let engine: AsrEngine | null = null;
 const vads: Record<Channel, VadSegmenter> = { them: new VadSegmenter(), me: new VadSegmenter() };
 const routers: Record<Channel, LanguageRouter> = { them: new LanguageRouter(), me: new LanguageRouter() };
 let language: 'auto' | string = 'auto';
-let queue: PendingSegment[] = [];
+let queue: (PendingSegment | { cut: string })[] = [];
+let cutting: { requestId: string; frames: { pcm: Float32Array; captureTs: number }[]; error?: string; flush?: boolean } | null = null;
+let cutTimer: ReturnType<typeof setTimeout> | undefined;
+const closingStreams: Record<Channel, Set<Promise<void>>> = { them: new Set(), me: new Set() };
+const partialEpoch: Record<Channel, number> = { them: 0, me: 0 };
 let transcribing = false;
 let segCounter = 0;
 let shuttingDown = false;
@@ -135,7 +139,7 @@ function handleVadEvents(events: ReturnType<VadSegmenter['push']>, channel: Chan
     } else if (ev.type === 'partial') {
       void doPartial(ev.pcm, channel);
     } else if (ev.type === 'segment') {
-      if (queue.length >= MAX_QUEUE) {
+      if (queue.length >= MAX_QUEUE && !cutting) {
         queue.shift();
         post({ type: 'error', message: 'transcribe queue overflow, dropped oldest segment', fatal: false });
       }
@@ -156,7 +160,7 @@ function ensureStream(ch: Channel): void {
   const session = engine.openSession(
     {
       onPartial: (text) => {
-        if (!shuttingDown && !isJunkTranscript(text)) post({ type: 'partial', speaker: ch, text });
+        if (!shuttingDown && streams[ch] === session && !isJunkTranscript(text)) post({ type: 'partial', speaker: ch, text });
       },
       onSentence: (s) => {
         if (shuttingDown || isJunkTranscript(s.text)) return;
@@ -176,7 +180,8 @@ function ensureStream(ch: Channel): void {
         });
       },
       onError: (message) => {
-        streams[ch] = null;
+        if (streams[ch] === session) streams[ch] = null;
+        if (ch === 'them' && cutting) cutting.error = message;
         if (!shuttingDown) post({ type: 'error', message: `streaming ASR (${ch}): ${message}`, fatal: false });
       },
     },
@@ -189,12 +194,65 @@ function ensureStream(ch: Channel): void {
   console.log(`[worker] stream open ch=${ch}`);
 }
 
-function closeStream(ch: Channel): void {
+function closeStream(ch: Channel): Promise<void> {
   const s = streams[ch];
-  if (!s) return;
+  if (!s) return Promise.resolve();
   streams[ch] = null;
   console.log(`[worker] stream close ch=${ch}`);
-  void s.close().catch(() => undefined);
+  const closing = s.close().catch((e: unknown) => {
+    if (ch === 'them' && cutting) cutting.error = String(e);
+    if (!shuttingDown) post({ type: 'error', message: `ASR finalization failed (${ch}): ${String(e)}`, fatal: false });
+  });
+  closingStreams[ch].add(closing);
+  void closing.finally(() => closingStreams[ch].delete(closing));
+  return closing;
+}
+
+function finishCut(requestId: string): void {
+  if (!cutting || cutting.requestId !== requestId) return;
+  const saved = cutting;
+  cutting = null;
+  clearTimeout(cutTimer);
+  // Ordered before processing ANY post-boundary audio, so the renderer claims
+  // exactly the earlier transcript snapshot when it sees this marker.
+  post({ type: 'cut', requestId, error: saved.error });
+  for (const frame of saved.frames) {
+    if (engine && isStreamingEngine(engine)) handleStreamingPcm(frame.pcm, 'them', frame.captureTs);
+    else handleVadEvents(vads.them.push(frame.pcm, frame.captureTs), 'them');
+  }
+  // Capture may stop while pre-cut recognition is still finishing. Flush the
+  // replayed continuation too, otherwise its last utterance waits indefinitely.
+  if (saved.flush) {
+    if (engine && isStreamingEngine(engine)) {
+      vads.them.flush();
+      void closeStream('them');
+    } else handleVadEvents(vads.them.flush(true), 'them');
+  }
+}
+
+function cutAudio(requestId: string): void {
+  if (!engine || cutting) {
+    post({ type: 'cut', requestId, error: cutting ? 'Another audio boundary is still pending' : 'ASR is not ready' });
+    return;
+  }
+  cutting = { requestId, frames: [] };
+  cutTimer = setTimeout(() => {
+    if (cutting?.requestId !== requestId) return;
+    cutting.error = 'ASR boundary timed out; question was not submitted';
+    finishCut(requestId);
+  }, 45_000);
+  partialEpoch.them++;
+  if (isStreamingEngine(engine)) {
+    vads.them.flush();
+    ring.them = [];
+    void closeStream('them');
+    // Includes sessions already closing due to idle/capture stop.
+    void Promise.all([...closingStreams.them]).then(() => finishCut(requestId));
+  } else {
+    handleVadEvents(vads.them.flush(true), 'them');
+    queue.push({ cut: requestId });
+    void pump();
+  }
 }
 
 function handleStreamingPcm(pcm: Float32Array, ch: Channel, captureTs: number): void {
@@ -247,10 +305,11 @@ setInterval(() => {
 async function doPartial(pcm: Float32Array, channel: Channel): Promise<void> {
   if (!engine || transcribing || partialBusy || queue.length > 0 || shuttingDown) return;
   partialBusy = true;
+  const epoch = partialEpoch[channel];
   try {
     const lang = language === 'auto' ? routers[channel].currentLang : language;
     const r = await engine.transcribe(pcm, lang);
-    if (!isJunkTranscript(r.text) && !transcribing) {
+    if (!isJunkTranscript(r.text) && !transcribing && epoch === partialEpoch[channel]) {
       post({ type: 'partial', speaker: channel, text: r.text });
     }
   } catch {
@@ -267,6 +326,11 @@ async function pump(): Promise<void> {
   if (!seg) {
     const speaking = vads.them.state === 'speech' || vads.me.state === 'speech';
     post({ type: 'status', state: speaking ? 'speech' : 'listening', queuedSegments: 0 });
+    return;
+  }
+  if ('cut' in seg) {
+    finishCut(seg.cut);
+    void pump();
     return;
   }
   transcribing = true;
@@ -321,6 +385,7 @@ async function pump(): Promise<void> {
       });
     }
   } catch (e) {
+    if (seg.speaker === 'them' && cutting) cutting.error = (e as Error).message;
     post({ type: 'error', message: `transcribe failed: ${(e as Error).message}`, fatal: false });
   } finally {
     lastInferTs = Date.now();
@@ -344,6 +409,10 @@ listen((msg: WorkerInMessage) => {
               (msg.pcm as unknown as ArrayBufferView).buffer ?? (msg.pcm as unknown as ArrayBuffer),
             );
       const ch: Channel = msg.channel === 'me' ? 'me' : 'them';
+      if (ch === 'them' && cutting) {
+        cutting.frames.push({ pcm, captureTs: msg.captureTs });
+        break;
+      }
       if (isStreamingEngine(engine)) handleStreamingPcm(pcm, ch, msg.captureTs);
       else handleVadEvents(vads[ch].push(pcm, msg.captureTs), ch);
       break;
@@ -351,15 +420,21 @@ listen((msg: WorkerInMessage) => {
     case 'config':
       if (msg.language) language = msg.language;
       break;
+    case 'cut':
+      cutAudio(msg.requestId);
+      break;
     case 'flush':
+      partialEpoch.them++;
+      partialEpoch.me++;
+      if (cutting) cutting.flush = true;
       if (engine && isStreamingEngine(engine)) {
-        vads.them.flush();
+        if (!cutting) vads.them.flush();
         vads.me.flush();
-        closeStream('them');
-        closeStream('me');
+        if (!cutting) void closeStream('them');
+        void closeStream('me');
         post({ type: 'status', state: 'listening', queuedSegments: 0 });
       } else {
-        handleVadEvents(vads.them.flush(), 'them');
+        if (!cutting) handleVadEvents(vads.them.flush(), 'them');
         handleVadEvents(vads.me.flush(), 'me');
       }
       break;

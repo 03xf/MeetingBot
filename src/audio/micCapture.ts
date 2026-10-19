@@ -3,6 +3,8 @@
  * platforms without Electron loopback, for the other-party channel (including
  * virtual inputs such as BlackHole). Feeds the same 16 kHz PCM worklet.
  */
+import { cutCapture } from './cutCapture';
+
 export class MicCapture {
   private ctx: AudioContext | null = null;
   private stream: MediaStream | null = null;
@@ -33,7 +35,9 @@ export class MicCapture {
     await ctx.audioWorklet.addModule('pcm-worklet.js');
     const source = ctx.createMediaStreamSource(stream);
     const node = new AudioWorkletNode(ctx, 'pcm-worklet');
-    node.port.onmessage = (e: MessageEvent<ArrayBuffer>) => onPcm(e.data, Date.now());
+    node.port.onmessage = (e: MessageEvent<ArrayBuffer>) => {
+      if (e.data instanceof ArrayBuffer) onPcm(e.data, Date.now());
+    };
     // route through a muted gain so the node is pulled without echoing the mic
     const mute = ctx.createGain();
     mute.gain.value = 0;
@@ -56,6 +60,10 @@ export class MicCapture {
       await this.ctx.close().catch(() => undefined);
       this.ctx = null;
     }
+  }
+
+  cut(requestId: string, onCut: () => void): Promise<void> {
+    return cutCapture(this.node, requestId, onCut);
   }
 }
 

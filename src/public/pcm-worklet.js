@@ -8,6 +8,17 @@ class PcmWorklet extends AudioWorkletProcessor {
     super();
     this.buf = new Float32Array(1600);
     this.n = 0;
+    this.port.onmessage = ({ data }) => {
+      if (data?.type !== 'cut') return;
+      // Deliver even the unfinished 100 ms frame BEFORE the ordered marker.
+      if (this.n) {
+        const tail = this.buf.slice(0, this.n);
+        this.port.postMessage(tail.buffer, [tail.buffer]);
+        this.buf = new Float32Array(1600);
+        this.n = 0;
+      }
+      this.port.postMessage({ type: 'cut', requestId: data.requestId });
+    };
   }
 
   process(inputs) {

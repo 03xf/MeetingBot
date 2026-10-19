@@ -19,14 +19,14 @@ Live transcription of the other side · first-person teleprompter answers · cap
 
 ## Download
 
-> **v0.2.0-beta.4: collect the whole question, then confirm manually.** Transcription continues; confirmation combines all other-party speech since the previous submission. New speech received while answering stays queued for the next question. See the [release notes (中文)](docs/releases/v0.2.0-beta.4.md). The upstream demo videos below show the older automatic answering mode, now replaced by manual confirmation.
+> **v0.2.0-beta.5: cut the current utterance and answer.** Click **Cut & answer** to finalize audio recorded up to this point, even before subtitles appear, and combine it with the pending question. Recognition finishes before answering. Recording continues; later audio belongs to the next question. See the [release notes (中文)](docs/releases/v0.2.0-beta.5.md). The upstream demo videos below show the older automatic answering mode, now replaced by manual confirmation.
 
 > **Personal knowledge edition:** This repository extends [JWM0203/MeetingCopilot](https://github.com/JWM0203/MeetingCopilot) with a shared, multi-document personal library, local retrieval, knowledge-first answering and inspectable reference passages. See the [personal knowledge guide (中文)](docs/user/PERSONAL_KNOWLEDGE.zh-CN.md). The Windows downloads below are built from this enhanced edition.
 
 **Just want to use it?** Download the installer — no Node.js, no Python, no commands.
 **Want to hack on it?** Skip to [Development](#development) and run from source.
 
-**[⬇ Download the personal knowledge edition](https://github.com/03xf/MeetingCopilot-Knowledge/releases)**
+**[⬇ Download the personal knowledge edition](https://github.com/03xf/MeetingBot/releases)**
 
 | File | Type | Best for |
 |---|---|---|
@@ -185,8 +185,8 @@ Place [`onnx-community/whisper-large-v3-turbo-ONNX`](https://huggingface.co/onnx
 ## Development
 
 ```bash
-git clone https://github.com/03xf/MeetingCopilot-Knowledge.git
-cd MeetingCopilot-Knowledge
+git clone https://github.com/03xf/MeetingBot.git
+cd MeetingBot
 npm install        # postinstall applies patches/ (transformers.js patch — do not remove)
 npm run build      # builds main + preload + renderer into out/
 npm start          # cross-platform; Windows can also use start.bat

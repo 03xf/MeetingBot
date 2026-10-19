@@ -46,6 +46,7 @@ export interface McApi {
   onAsrEvent(cb: (ev: AsrEvent) => void): () => void;
   /** pull the last ready/status events (call AFTER onAsrEvent subscription) */
   asrReplay(): Promise<{ ready: AsrEvent | null; status: AsrEvent | null }>;
+  asrCut(requestId: string): void;
   llmAsk(payload: LlmAskPayload): void;
   shotAsk(payload: {
     requestId: string;
@@ -117,6 +118,7 @@ const api: McApi = {
     return () => ipcRenderer.removeListener(IPC.asrEvent, listener);
   },
   asrReplay: () => ipcRenderer.invoke(IPC.asrReplay),
+  asrCut: (requestId) => ipcRenderer.send(IPC.asrCut, requestId),
   llmAsk: (payload) => ipcRenderer.send(IPC.llmAsk, payload),
   shotAsk: (payload) => ipcRenderer.send(IPC.shotAsk, payload),
   pickRegion: () => ipcRenderer.invoke(IPC.regionPick),
