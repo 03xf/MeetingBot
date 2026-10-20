@@ -193,6 +193,25 @@ describe('SettingsStore', () => {
     expect(s2.data.ui.stealth).toBe(false); // sibling untouched
   });
 
+  it('persists background alpha without changing the theme or custom prompt', () => {
+    const s = new SettingsStore(file, fakeCipher);
+    s.applyPatch({ llm: { customPrompt: '回答要求' }, ui: { opacity: 0.25, theme: 'light' } });
+    const restored = new SettingsStore(file, fakeCipher).getPublic();
+    expect(restored.ui.opacity).toBe(0.25);
+    expect(restored.ui.theme).toBe('light');
+    expect(restored.llm.customPrompt).toBe('回答要求');
+  });
+
+  it('bounds opacity and recovers malformed stored values', () => {
+    const s = new SettingsStore(file, fakeCipher);
+    s.applyPatch({ ui: { opacity: -1 } });
+    expect(s.getPublic().ui.opacity).toBe(0.05);
+    s.applyPatch({ ui: { opacity: 2 } });
+    expect(s.getPublic().ui.opacity).toBe(1);
+    writeFileSync(file, JSON.stringify({ version: 2, ui: { opacity: 'invalid' } }));
+    expect(new SettingsStore(file, fakeCipher).getPublic().ui.opacity).toBe(0.8);
+  });
+
   it('merges unknown/missing sections gracefully (migration-friendly)', () => {
     writeFileSync(file, JSON.stringify({ version: 1, llm: { model: 'custom-model' } }), 'utf8');
     const s = new SettingsStore(file, fakeCipher);

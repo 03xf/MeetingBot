@@ -27,6 +27,7 @@ import {
   type EndpointTarget,
 } from '../../shared/providerTestRequests';
 import { sanitizeApiKeyInput } from '../../shared/keyInput';
+import { backgroundOpacity } from '../../shared/appearance';
 import { listMics } from '../audio/micCapture';
 import { useT } from '../i18n';
 import { ConnectionResult } from './providers/ConnectionResult';
@@ -120,6 +121,7 @@ export function SettingsPanel({
   onRerunWizard,
   onOpenDiagnostics,
   onOpenHelp,
+  onOpacityPreview,
 }: {
   settings: PublicSettings;
   onSaved: (s: PublicSettings) => void;
@@ -130,6 +132,7 @@ export function SettingsPanel({
   onOpenDiagnostics?: () => void;
   /** in-app help center (also reachable from the tray) */
   onOpenHelp?: () => void;
+  onOpacityPreview: (opacity: number | null) => void;
 }) {
   const t = useT();
   const [baseUrl, setBaseUrl] = useState(settings.llm.baseUrl);
@@ -153,6 +156,7 @@ export function SettingsPanel({
   const [autoLaunch, setAutoLaunch] = useState(settings.ui.autoLaunch);
   const [fontScale, setFontScale] = useState<FontScale>(settings.ui.fontScale ?? 'medium');
   const [theme, setTheme] = useState<ThemeMode>(settings.ui.theme ?? 'dark');
+  const [opacity, setOpacity] = useState(() => backgroundOpacity(settings.ui.opacity));
   const [uiLang, setUiLang] = useState<UiLang>(settings.ui.lang);
   const [themDeviceId, setThemDeviceId] = useState(settings.audio.themDeviceId ?? '');
   const [micDeviceId, setMicDeviceId] = useState(settings.audio.micDeviceId ?? '');
@@ -176,6 +180,10 @@ export function SettingsPanel({
   const [tests, setTests] = useState<Partial<Record<ProviderSlot, SlotTest>>>({});
   const anyTesting = Object.values(tests).some((s) => s?.testing);
   const resultCopy = connectionResultCopy(t);
+
+  // Cancelling, closing via the titlebar or opening another panel rolls back
+  // the live preview. Only Save persists the draft background alpha.
+  useEffect(() => () => onOpacityPreview(null), [onOpacityPreview]);
 
   useEffect(() => {
     void listMics()
@@ -306,6 +314,7 @@ export function SettingsPanel({
           hotkeyShot: hotkeyShot.trim(),
           fontScale,
           theme,
+          opacity,
           lang: uiLang,
           autoLaunch,
         },
@@ -636,6 +645,24 @@ export function SettingsPanel({
           <option value="system">{t.settings.themeSystem}</option>
         </select>
       </div>
+      <div className="settings-row">
+        <label htmlFor="background-transparency">{t.settings.transparencyLabel} · {Math.round((1 - opacity) * 100)}%</label>
+        <input
+          id="background-transparency"
+          type="range"
+          min="0"
+          max="95"
+          step="1"
+          value={Math.round((1 - opacity) * 100)}
+          onChange={(e) => {
+            const next = backgroundOpacity(1 - Number(e.target.value) / 100);
+            setOpacity(next);
+            onOpacityPreview(next);
+          }}
+        />
+        <div className="settings-range-labels"><span>{t.settings.transparencyOpaque}</span><span>{t.settings.transparencyClear}</span></div>
+      </div>
+      <div className="settings-hint">{t.settings.transparencyHint}</div>
       <div className="settings-row">
         <label>{t.settings.fontScaleLabel}</label>
         <select value={fontScale} onChange={(e) => setFontScale(e.target.value as FontScale)}>

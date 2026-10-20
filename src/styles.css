@@ -13,7 +13,7 @@
   /* answer-body font size (right pane only; ui.fontScale) */
   --answer-font-size: 16px;
 
-  --app-bg: rgba(22, 26, 34, 0.8);
+  --app-bg: rgba(22, 26, 34, var(--background-opacity, 0.8));
   --app-border: rgba(255, 255, 255, 0.1);
   --text: #e8eaf0;
   --text-body: #e3e8f2;
@@ -95,7 +95,7 @@
 }
 
 :root[data-theme='light'] {
-  --app-bg: rgba(246, 248, 251, 0.93);
+  --app-bg: rgba(246, 248, 251, var(--background-opacity, 0.8));
   --app-border: rgba(0, 0, 0, 0.16);
   --text: #1f2633;
   --text-body: #1c2434;
@@ -733,6 +733,18 @@ body {
   min-height: 120px;
   line-height: 1.6;
   font-family: inherit;
+}
+
+.settings-row input[type='range'] {
+  accent-color: var(--accent);
+  cursor: pointer;
+  width: 100%;
+}
+.settings-range-labels {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-muted);
+  font-size: 11px;
 }
 
 .settings-section {

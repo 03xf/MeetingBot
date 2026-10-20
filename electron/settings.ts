@@ -21,6 +21,7 @@ import type {
   UiLang,
 } from '../shared/protocol';
 import { defaultHotkeysForPlatform } from '../shared/platform';
+import { backgroundOpacity, DEFAULT_BACKGROUND_OPACITY } from '../shared/appearance';
 import { providerIdForEndpoint } from '../shared/providerCatalog';
 
 export interface SecretCipher {
@@ -83,7 +84,7 @@ export function defaultSettings(platform: string = process.platform): SettingsFi
       stealth: true,
       hotkeyToggle: hotkeys.toggle,
       hotkeyShot: hotkeys.shot,
-      opacity: 0.94,
+      opacity: DEFAULT_BACKGROUND_OPACITY,
       // medium = 16px answer body (was 13px) — readable at a glance mid-interview
       fontScale: 'medium',
       theme: 'dark',
@@ -338,7 +339,10 @@ export class SettingsStore {
         }
       }
     }
-    if (patch.ui) Object.assign(this.data.ui, stripUndefined(patch.ui));
+    if (patch.ui) {
+      Object.assign(this.data.ui, stripUndefined(patch.ui));
+      this.data.ui.opacity = backgroundOpacity(this.data.ui.opacity);
+    }
     if (patch.audio) Object.assign(this.data.audio, stripUndefined(patch.audio));
     this.save();
   }
@@ -443,6 +447,7 @@ export class SettingsStore {
       knowledge: { chars: 0 },
       ui: {
         ...d.ui,
+        opacity: backgroundOpacity(d.ui.opacity),
         lang: d.ui.lang ?? this.fallbackUiLang,
         // both are optional on disk (files written before Phase 4 lack them)
         // but always booleans on the wire, so the UI needs no ?? dance

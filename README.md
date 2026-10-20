@@ -19,7 +19,7 @@ Live transcription of the other side · first-person teleprompter answers · cap
 
 ## Download
 
-> **v0.2.0-beta.7: custom answer instructions.** Write and save your instructions under **Settings → Custom instructions**. Every subsequent answer includes them across all sessions, including combined questions, single-line answers, free questions and screenshots. Persists after restart; clear to restore the default style. Active audio cuts, personal knowledge and formatted code blocks remain available. See the [release notes (中文)](docs/releases/v0.2.0-beta.7.md). The upstream demos below show the older automatic answering mode, now replaced by manual confirmation.
+> **v0.2.0-beta.8: adjustable background transparency.** Drag the slider in **Settings → Background transparency** to preview, then Save to keep it after restart. Text, buttons and solid code blocks retain their opacity. Custom instructions, personal knowledge and active audio cuts remain available. See the [release notes (中文)](docs/releases/v0.2.0-beta.8.md). The upstream demos below show the older automatic answering mode, now replaced by manual confirmation.
 
 > **Personal knowledge edition:** This repository extends [JWM0203/MeetingCopilot](https://github.com/JWM0203/MeetingCopilot) with a shared, multi-document personal library, local retrieval, knowledge-first answering and inspectable reference passages. See the [personal knowledge guide (中文)](docs/user/PERSONAL_KNOWLEDGE.zh-CN.md). The Windows downloads below are built from this enhanced edition.
 

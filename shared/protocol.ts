@@ -218,6 +218,7 @@ export interface SettingsFile {
     hotkeyToggle: string;
     /** global hotkey for region-screenshot Q&A */
     hotkeyShot: string;
+    /** Main background alpha (0.05–1); does not dim text, buttons or code. */
     opacity: number;
     /** answer-body font size (small=13px / medium=16px / large=19px) */
     fontScale: FontScale;

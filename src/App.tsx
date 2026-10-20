@@ -22,6 +22,7 @@ import {
   restoreQuestion,
 } from '../shared/questionQueue';
 import { captureKindForPlatform } from '../shared/platform';
+import { backgroundOpacity } from '../shared/appearance';
 import { deriveServiceHealth } from '../shared/healthState';
 import { LoopbackCapture } from './audio/loopbackCapture';
 import { MicCapture, listMics } from './audio/micCapture';
@@ -82,6 +83,7 @@ export function App() {
   const [asr, setAsr] = useState<AsrUiState>({ phase: 'loading', workerState: 'loading' });
   const [capturing, setCapturing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [opacityPreview, setOpacityPreview] = useState<number | null>(null);
   const [showHealth, setShowHealth] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -418,6 +420,10 @@ export function App() {
     const t = setTimeout(() => window.mc.saveSessions({ sessions, currentId }), 400);
     return () => clearTimeout(t);
   }, [sessions, currentId]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--background-opacity', String(backgroundOpacity(opacityPreview ?? settings?.ui.opacity)));
+  }, [settings?.ui.opacity, opacityPreview]);
 
   // ---- apply UI theme + answer font scale to the document root ----
   useEffect(() => {
@@ -939,6 +945,7 @@ export function App() {
       {showSettings && settings && (
         <SettingsPanel
           settings={settings}
+          onOpacityPreview={setOpacityPreview}
           onSaved={(s) => {
             setSettings(s);
             answerLangRef.current = s.llm.answerLang;

@@ -17,7 +17,7 @@ if (!process.versions.electron) {
     if (result.error) throw result.error;
     if (result.status !== 0) process.exit(result.status ?? 1);
   }
-  console.log('[custom-prompt] UI save, real text/vision requests, immediate edit, clear and restart persistence passed');
+  console.log('[custom-prompt] UI save, real model requests and restart passed; transparency preview, rollback, both themes and persistence passed');
 } else {
   void run().catch(error => { console.error(error); require('electron').app.exit(1); });
 }
@@ -68,8 +68,13 @@ async function run() {
     llm: { ...saved.llm, baseUrl: url, model: 'fake', apiKeyEnc },
     vision: { baseUrl: url, model: 'fake-vision', apiKeyEnc },
     asr: { backend: 'cloud', cloud: { baseUrl: url, model: 'fake', apiKeyEnc } },
-    ui: { lang: 'zh', theme: 'dark', stealth: false, hotkeyToggle: '', hotkeyShot: '' },
+    ui: { ...saved.ui, lang: 'zh', theme: 'dark', stealth: false, hotkeyToggle: '', hotkeyShot: '' },
   }));
+  const sessionsFile = path.join(profile, 'sessions.json');
+  if (!fs.existsSync(sessionsFile)) fs.writeFileSync(sessionsFile, JSON.stringify({ currentId: 'opacity-qa', sessions: [{
+    id: 'opacity-qa', name: '界面验证', createdAt: 1, titled: true, segments: [], pendingQuestion: [], questionQueueVersion: 1,
+    turns: [{ id: 'preview-answer', kind: 'free', label: '示例回答', status: 'done', text: '## 回答示例\n\n背景可以透明，文字保持清晰。\n\n```java\nclass Solution {\n    int answer = 42;\n}\n```' }],
+  }] }));
   app.on('browser-window-created', (_event, window) => { if (!win) win = window; });
   require('../out/main/index.js');
   await until(async () => win && await js('typeof window.__mcOpenSettings === "function"'), 'main UI');
@@ -90,6 +95,24 @@ async function run() {
     await until(() => js('!document.querySelector("#custom-answer-prompt")'), 'saved');
     assert.equal(await js('window.mc.getSettings().then(s=>s.llm.customPrompt)'), value);
   }
+  async function slider(transparency) {
+    await js(`(()=>{const e=document.querySelector('#background-transparency');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,${JSON.stringify(String(transparency))});e.dispatchEvent(new Event('input',{bubbles:true}));})()`);
+    await until(() => js(`Math.abs(Number(getComputedStyle(document.documentElement).getPropertyValue('--background-opacity'))-${1 - transparency / 100})<0.001`), 'live alpha');
+  }
+  const cancelPanel = () => js(`Array.from(document.querySelectorAll('.settings-actions button')).find(e=>e.textContent==='取消').click()`);
+  async function savePanel() {
+    await js(`document.querySelector('.settings-actions .btn-primary').click()`);
+    await until(() => js('!document.querySelector("#background-transparency")'), 'panel saved');
+  }
+  async function checkAppearance(alpha) {
+    await until(() => js(`Math.abs(Number(getComputedStyle(document.documentElement).getPropertyValue('--background-opacity'))-${alpha})<0.001`), 'saved alpha');
+    assert.equal(win.getOpacity(), 1, 'native window opacity must not dim content');
+    const style = await js(`(()=>{const css=s=>getComputedStyle(document.querySelector(s));return {background:css('.app').backgroundColor,app:css('.app').opacity,text:css('.answer-markdown').opacity,button:css('.titlebar .btn').opacity,code:css('.answer-code-block').backgroundColor}})()`);
+    const rgba = style.background.match(/[\d.]+/g).map(Number);
+    assert(Math.abs((rgba[3] ?? 1) - alpha) < 0.001, 'background alpha follows the setting');
+    assert.equal(style.app, '1'); assert.equal(style.text, '1'); assert.equal(style.button, '1');
+    assert(style.code.startsWith('rgb('), 'code background remains opaque');
+  }
   async function ask(mode, expected, vision = false) {
     const requestId = 'test-' + requests.length;
     const start = requests.length;
@@ -102,7 +125,9 @@ async function run() {
     return request;
   }
   if (process.argv[2] === 'restart') {
+    await checkAppearance(0.25);
     await open();
+    assert.equal(await js('document.querySelector("#background-transparency").value'), '75');
     assert.equal(await js('document.querySelector("#custom-answer-prompt").value'), prompt);
     await js(`Array.from(document.querySelectorAll('.settings-actions button')).find(e=>e.textContent==='取消').click()`);
     await ask('free', prompt);
@@ -122,10 +147,47 @@ async function run() {
     await ask('continuous', null);
     await save(prompt);
     await open();
+    const originalAlpha = await js('window.mc.getSettings().then(s=>s.ui.opacity)');
+    await slider(0); await checkAppearance(1);
+    await slider(95); await checkAppearance(0.05);
+    await slider(75);
+    await checkAppearance(0.25);
+    assert.equal(await js('window.mc.getSettings().then(s=>s.ui.opacity)'), originalAlpha, 'preview must not write settings');
+    await cancelPanel();
+    await checkAppearance(originalAlpha);
+    await open(); await slider(75); await savePanel();
+    await checkAppearance(0.25);
+    assert.equal(await js('window.mc.getSettings().then(s=>s.ui.opacity)'), 0.25);
+    // Both themes use the same alpha while keeping the code panel solid.
+    await open();
+    await js(`(()=>{const e=Array.from(document.querySelectorAll('.settings select')).find(e=>e.querySelector('option[value="dark"]'));e.value='light';e.dispatchEvent(new Event('change',{bubbles:true}))})()`);
+    await savePanel();
+    await checkAppearance(0.25);
+    assert.equal(await js('document.documentElement.dataset.theme'), 'light');
+    await open();
+    await js(`(()=>{const e=Array.from(document.querySelectorAll('.settings select')).find(e=>e.querySelector('option[value="dark"]'));e.value='dark';e.dispatchEvent(new Event('change',{bubbles:true}))})()`);
+    await savePanel();
+    await checkAppearance(0.25);
+    await open();
     win.setSize(1180, 900);
     await js(`document.querySelector('#custom-answer-prompt').scrollIntoView({block:'center'})`);
     await pause(250);
     fs.writeFileSync(path.join(qa, 'settings-preview.png'), (await win.webContents.capturePage()).toPNG());
+    await js(`document.querySelector('#background-transparency').scrollIntoView({block:'center'})`);
+    await pause(250);
+    fs.writeFileSync(path.join(qa, 'transparency-settings.png'), (await win.webContents.capturePage()).toPNG());
+    await cancelPanel(); await pause(150);
+    const capture = await win.webContents.capturePage();
+    fs.writeFileSync(path.join(qa, 'transparency-main.png'), capture.toPNG());
+    // Check actual rendered alpha, not just CSS: the blank background is
+    // translucent while the code frame stays opaque in the native capture.
+    const size = capture.getSize();
+    const bitmap = capture.getBitmap();
+    const alphaAt = (x, y) => bitmap[(Math.floor(y) * size.width + Math.floor(x)) * 4 + 3];
+    const blankAlpha = alphaAt(size.width * 0.2, size.height * 0.8);
+    assert(Math.abs(blankAlpha - 64) <= 2, 'rendered background really has 25% alpha');
+    const code = await js(`(()=>{const r=document.querySelector('.answer-code-block').getBoundingClientRect();return {x:(r.left+r.width/2)/innerWidth,y:(r.top+r.height/2)/innerHeight}})()`);
+    assert.equal(alphaAt(code.x * size.width, code.y * size.height), 255, 'rendered code frame remains opaque');
   }
   clearTimeout(timer);
   await new Promise(resolve => server.close(resolve));
