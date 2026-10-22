@@ -7,7 +7,8 @@ import type { TrayMenuLabels } from '../shared/trayMenu';
  * engine diagnostics stay untranslated on purpose.
  */
 const zh = {
-  regionTip: '拖动框选要识别的区域 · 右键或再次按截图快捷键取消',
+  regionTip: '拖动框选要识别的区域 · 右键或再次按截图快捷键取消 · 90 秒后自动取消',
+  recoveredViewWarn: '界面已恢复，录音和本轮生成已停止。已保存的会话仍保留；未保存输入可能丢失，请按「开始」重新采集。',
   kbImportTitle: '导入个人知识库（可多选文档）',
   docFilter: '文档',
   pickResumeTitle: '导入我的简历（md/txt/docx/pdf）',
@@ -32,6 +33,7 @@ const zh = {
     settings: '设置',
     serviceStatus: '服务状态',
     help: '帮助与教程',
+    recoverWindow: '恢复界面（停止录音和生成）',
     checkUpdates: '检查更新',
     quit: '退出',
     capturing: '转写中',
@@ -43,7 +45,8 @@ const zh = {
 type MainDict = typeof zh;
 
 const en: MainDict = {
-  regionTip: 'Drag to select · Right click or press the screenshot hotkey again to cancel',
+  regionTip: 'Drag to select · Right click or repeat the screenshot hotkey to cancel · Auto-cancels after 90s',
+  recoveredViewWarn: 'The interface has recovered. Recording and generation were stopped. Saved sessions remain; unsaved input may be lost. Press Start to resume recording.',
   kbImportTitle: 'Import personal knowledge documents (multiple files)',
   docFilter: 'Documents',
   pickResumeTitle: 'Import my resume (md/txt/docx/pdf)',
@@ -68,6 +71,7 @@ const en: MainDict = {
     settings: 'Settings',
     serviceStatus: 'Service status',
     help: 'Help & guides',
+    recoverWindow: 'Recover interface (stop recording & generation)',
     checkUpdates: 'Check for updates',
     quit: 'Quit',
     capturing: 'transcribing',

@@ -21,6 +21,7 @@ const labels: TrayMenuLabels = {
   settings: 'settings',
   serviceStatus: 'status',
   help: 'help',
+  recoverWindow: 'recover',
   checkUpdates: 'updates',
   quit: 'quit',
   capturing: 'transcribing',
@@ -44,6 +45,7 @@ describe('tray menu model', () => {
       'open-settings',
       'open-health',
       'open-help',
+      'recover-window',
       'check-updates',
       'quit',
     ]);

@@ -84,6 +84,7 @@ export function App() {
   const [asr, setAsr] = useState<AsrUiState>({ phase: 'loading', workerState: 'loading' });
   const [capturing, setCapturing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [windowNotice, setWindowNotice] = useState<string | null>(null);
   const [windowMode, setWindowMode] = useState<WindowInteractionMode>(window.mc.platform === 'win32' ? 'browse' : 'edit');
   const requestEdit = useCallback(async () => {
     const mode = await window.mc.setWindowMode('edit');
@@ -92,6 +93,7 @@ export function App() {
   useEffect(() => {
     const off = window.mc.onWindowModeChanged(setWindowMode);
     void window.mc.getWindowMode().then(setWindowMode);
+    void window.mc.getRecoveryNotice().then(setWindowNotice);
     return off;
   }, []);
   const [opacityPreview, setOpacityPreview] = useState<number | null>(null);
@@ -919,6 +921,10 @@ export function App() {
           </button>
         </div>
       </header>
+
+      {windowNotice && <div className="upgrade-banner" role="status">
+        <span>{windowNotice}</span><button className="btn btn-sm" onClick={() => setWindowNotice(null)}>×</button>
+      </div>}
 
       {/* grandfathered users (settings.json predates the wizard) get one
           dismissible pointer at the new wizard; wizard-created profiles never

@@ -21,6 +21,7 @@ export type TrayCommand =
   | 'open-settings'
   | 'open-health'
   | 'open-help'
+  | 'recover-window'
   | 'check-updates'
   | 'quit';
 
@@ -58,6 +59,7 @@ export interface TrayMenuLabels {
   settings: string;
   serviceStatus: string;
   help: string;
+  recoverWindow: string;
   checkUpdates: string;
   quit: string;
   /** tooltip suffix while transcription is running */
@@ -103,6 +105,7 @@ export function buildTrayMenu(state: TrayMenuState, labels: TrayMenuLabels): Tra
     { id: 'open-settings', label: labels.settings, kind: 'command' },
     { id: 'open-health', label: labels.serviceStatus, kind: 'command' },
     { id: 'open-help', label: labels.help, kind: 'command' },
+    { id: 'recover-window', label: labels.recoverWindow, kind: 'command' },
     SEPARATOR,
     { id: 'check-updates', label: labels.checkUpdates, kind: 'command' },
     SEPARATOR,

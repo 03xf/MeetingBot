@@ -551,6 +551,7 @@ export const IPC = {
   windowModeGet: 'window:mode-get',
   windowModeSet: 'window:mode-set',
   windowModeChanged: 'window:mode-changed',
+  windowRecoveryGet: 'window:recovery-get',
   clipboardWriteText: 'app:clipboard-write',
   /** renderer -> main, fire and forget: (ArrayBuffer pcmF32, captureTs, Speaker) */
   capturePcm: 'capture:pcm',

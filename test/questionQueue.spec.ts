@@ -11,6 +11,23 @@ function hear(s: StoredSession, text: string, startTs = 0, speaker: 'them' | 'me
 }
 
 describe('manually confirmed question queue', () => {
+  it('marks interrupted free and screenshot answers as errors when recovering the interface', () => {
+    const s: StoredSession = { ...empty(), turns: [
+      { id: 'free', kind: 'free', label: 'test', text: 'partial', status: 'streaming' },
+      { id: 'shot', kind: 'vision', label: 'test', text: '', status: 'streaming' },
+    ] };
+    const recovered = loadQuestionSession(s, 'Interrupted');
+    expect(recovered.turns.map(t => t.status)).toEqual(['error', 'error']);
+    expect(recovered.turns[0].text).toBe('partial');
+    expect(loadQuestionSession(recovered, 'Interrupted')).toEqual(recovered);
+  });
+  it('also interrupts unfinished answers when migrating a legacy session', () => {
+    const s: StoredSession = { ...empty(), questionQueueVersion: undefined, turns: [
+      { id: 'old', kind: 'free', label: 'test', text: 'saved partial', status: 'streaming' },
+    ] };
+    const recovered = loadQuestionSession(s, 'Interrupted');
+    expect(recovered.turns[0]).toMatchObject({ status: 'error', text: 'saved partial', error: 'Interrupted' });
+  });
   it('combines all interviewer fragments regardless of silence or question marks', () => {
     let s = hear(empty(), '先介绍项目');
     s = hear(s, '然后讲一下难点', 60_000);

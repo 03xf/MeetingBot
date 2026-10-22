@@ -1,6 +1,6 @@
 {
   "name": "meetingbot",
-  "version": "0.2.0-beta.9",
+  "version": "0.2.0-beta.10",
   "description": "Real-time meeting/interview copilot for Windows and macOS: streaming ASR (local FunASR / cloud) and first-person answers via BYOK LLM",
   "main": "./out/main/index.js",
   "author": "JWM0203",
@@ -29,6 +29,7 @@
     "smoke:e2e:llm": "node tools/e2e-llm.mjs",
     "smoke:e2e:local": "node tools/e2e-local-lifecycle.mjs",
     "smoke:custom-prompt": "node tools/test-custom-prompt.cjs",
+    "smoke:window": "node tools/test-window-lifecycle.cjs",
     "smoke:packaged": "node tools/packaged-smoke.mjs"
   },
   "dependencies": {

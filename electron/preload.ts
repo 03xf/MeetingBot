@@ -22,6 +22,7 @@ import {
 
 export interface McApi {
   getWindowMode(): Promise<WindowInteractionMode>;
+  getRecoveryNotice(): Promise<string | null>;
   setWindowMode(mode: WindowInteractionMode): Promise<WindowInteractionMode>;
   onWindowModeChanged(cb: (mode: WindowInteractionMode) => void): () => void;
   writeClipboardText(text: string): Promise<void>;
@@ -99,6 +100,7 @@ export interface McApi {
 
 const api: McApi = {
   getWindowMode: () => ipcRenderer.invoke(IPC.windowModeGet),
+  getRecoveryNotice: () => ipcRenderer.invoke(IPC.windowRecoveryGet),
   setWindowMode: (mode) => ipcRenderer.invoke(IPC.windowModeSet, mode),
   onWindowModeChanged: (cb) => {
     const listener = (_e: Electron.IpcRendererEvent, mode: WindowInteractionMode) => cb(mode);

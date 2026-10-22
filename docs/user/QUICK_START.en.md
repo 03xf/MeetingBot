@@ -21,7 +21,7 @@ MeetingBot is **bring-your-own-key**: no accounts, no server, no fee collected b
 
 ## Step 1 — download and install
 
-1. Open the [Releases page](https://github.com/03xf/MeetingBot/releases/latest).
+1. Open the [Releases page](https://github.com/03xf/MeetingBot/releases).
 2. Download `MeetingBot-<version>-win-x64.exe` (installer) or `...-win-x64-portable.exe` (portable). The difference and the install locations are in [INSTALL_WINDOWS.en.md](INSTALL_WINDOWS.en.md).
 3. This beta is not code-signed, so Windows SmartScreen shows "Windows protected your PC". Once you have confirmed the file came from the official release page above, click **More info → Run anyway**.
 4. Verify the download first if you can: every `.exe` ships with a matching `.exe.sha256` file containing the hash CI computed at build time.
@@ -82,7 +82,7 @@ Review the summary and click "Enter MeetingBot". The wizard writes the whole pla
 
 ## Step 3 — your first meeting
 
-Windows beta.9 starts in **Browse mode**, with a non-focusable window. Answer, scroll, switch sessions and copy here; explicitly enter **Edit mode** to type, change settings or audio devices, or import files. Return to Browse afterwards. The first-run wizard is a normal focusable window. This is a test prerelease: native input acceptance in Edge / Chrome and platform tests on Feishu / Beisen remain pending. See the [release notes](../releases/v0.2.0-beta.9.md).
+Windows beta.10 starts in **Browse mode**, with a non-focusable window. Answer, scroll, switch sessions and copy here; explicitly enter **Edit mode** to type, change settings or audio devices, or import files. Return to Browse afterwards. The first-run wizard is a normal focusable window. This is a test prerelease: native input acceptance in Edge / Chrome and platform tests on Feishu / Beisen remain pending. See the [release notes](../releases/v0.2.0-beta.10.md).
 
 1. Play something with speech in it (a meeting, a video, a podcast).
 2. Click **▶ Start** in the title bar; the Transcript pane on the left starts filling.

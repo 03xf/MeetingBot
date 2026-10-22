@@ -23,8 +23,9 @@ import {
   whisperExecutionProvidersForPlatform,
 } from '../shared/platform';
 import { AsrHost } from './asrHost';
-import { displayWindow } from './windowInteraction';
+import { displayWindow, prepareRegionWindow } from './windowInteraction';
 import { RegionCapture } from './regionCapture';
+import { WindowFaults } from './windowFaults';
 import type { WindowInteractionMode } from '../shared/protocol';
 import {
   LocalPythonProbe,
@@ -138,14 +139,19 @@ function bootstrap(): void {
   let windowMode: WindowInteractionMode = process.platform === 'win32' ? 'browse' : 'edit';
   let cancelRegion = () => {};
   let regionIsActive = () => false;
+  let recoverWindow = () => {};
+  let recoveringView = false;
+  let recoveryNotice: string | null = null;
+  let windowFaults: WindowFaults | undefined;
 
   function setWindowMode(mode: WindowInteractionMode): WindowInteractionMode {
     if (mode !== 'browse' && mode !== 'edit') throw new Error('Invalid window mode');
     if (mode === 'browse' && process.platform !== 'win32') throw new Error('Browse mode is supported on Windows only');
+    const changed = windowMode !== mode;
     windowMode = mode;
-    win?.setFocusable(mode === 'edit');
+    if (win && win.isFocusable() !== (mode === 'edit')) win.setFocusable(mode === 'edit');
     if (mode === 'edit' && win) displayWindow(win, mode);
-    win?.webContents.send(IPC.windowModeChanged, mode);
+    if (changed) win?.webContents.send(IPC.windowModeChanged, mode);
     return mode;
   }
 
@@ -245,6 +251,9 @@ function bootstrap(): void {
     if (!win) return;
     if (process.platform === 'win32' && windowMode !== 'browse') setWindowMode('browse');
     displayWindow(win, windowMode);
+    // A hidden transparent surface may have discarded its last compositor
+    // frame. Request a repaint without activating or focusing the window.
+    if (!win.webContents.isDestroyed()) win.webContents.invalidate();
   }
 
   function toggleWindow(): void {
@@ -266,6 +275,7 @@ function bootstrap(): void {
   }
 
   function handleTrayCommand(command: TrayCommand): void {
+    if (command === 'recover-window') { recoverWindow(); return; }
     if (command === 'quit') {
       app.quit();
       return;
@@ -388,6 +398,7 @@ function bootstrap(): void {
     win.webContents.on('will-navigate', (e) => e.preventDefault());
 
     win.webContents.on('did-finish-load', () => {
+      recoveringView = false;
       // replay cached ASR state for late-attaching renderer
       if (asr.lastReady) win?.webContents.send(IPC.asrEvent, asr.lastReady);
       if (asr.lastStatus) win?.webContents.send(IPC.asrEvent, asr.lastStatus);
@@ -466,6 +477,11 @@ function bootstrap(): void {
 
     win.on('closed', () => {
       win = null;
+    });
+    win.on('unresponsive', () => windowFaults?.record('unresponsive', `renderer unresponsive; visible=${!!win?.isVisible()}; mode=${windowMode}`));
+    win.webContents.on('render-process-gone', (_e, details) => {
+      windowFaults?.record('renderer-exit', `reason=${details.reason}; exitCode=${details.exitCode}; requestedRecovery=${recoveringView}`);
+      cancelRegion();
     });
 
     if (process.env.ELECTRON_RENDERER_URL) {
@@ -552,6 +568,7 @@ function bootstrap(): void {
     // users who never chose a UI language get their OS language (zh → zh, else en)
     osLang = app.getLocale().toLowerCase().startsWith('zh') ? 'zh' : 'en';
     settings = new SettingsStore(join(app.getPath('userData'), 'settings.json'), cipher(), osLang);
+    windowFaults = new WindowFaults(join(app.getPath('userData'), 'window-faults.json'));
     knowledge = new KnowledgeStore(
       join(app.getPath('userData'), 'knowledge.json'),
       join(app.getPath('userData'), 'knowledge.md'),
@@ -644,7 +661,7 @@ function bootstrap(): void {
         }, 60_000);
       }
     });
-    ipcMain.on(IPC.captureStopped, () => {
+    function markCaptureStopped(): void {
       console.log('[main] capture stopped');
       lastCaptureStoppedAt = new Date().toISOString();
       capturing = false;
@@ -654,8 +671,10 @@ function bootstrap(): void {
         keepWarmTimer = null;
       }
       asr.flush();
-    });
+    }
+    ipcMain.on(IPC.captureStopped, markCaptureStopped);
     ipcMain.handle(IPC.windowModeGet, () => windowMode);
+    ipcMain.handle(IPC.windowRecoveryGet, () => recoveryNotice);
     ipcMain.handle(IPC.windowModeSet, (e, mode: WindowInteractionMode) => {
       if (e.sender !== win?.webContents) throw new Error('Invalid window mode sender');
       return setWindowMode(mode);
@@ -902,33 +921,38 @@ function bootstrap(): void {
     // avoids the transparent-window black-screen bug and is excluded from
     // recording via content protection. Returns the cropped image dataURL. ----
     let regionWin: BrowserWindow | null = null;
-    let regionBounds = screen.getPrimaryDisplay().bounds;
     const regionPicker = new RegionCapture({
+      onFailure: (reason) => windowFaults?.record('region', reason),
       capture: async () => {
         const disp = screen.getPrimaryDisplay();
-        regionBounds = disp.bounds;
         const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: {
           width: Math.round(disp.size.width * disp.scaleFactor), height: Math.round(disp.size.height * disp.scaleFactor),
         } });
         const src = sources.find((s) => s.display_id === String(disp.id)) ?? sources[0];
         if (!src || src.thumbnail.isEmpty()) throw new Error('No screen capture available');
-        return { image: src.thumbnail, width: disp.size.width, height: disp.size.height, scale: disp.scaleFactor };
+        return { image: src.thumbnail, width: disp.size.width, height: disp.size.height, scale: disp.scaleFactor,
+          origin: { x: disp.bounds.x, y: disp.bounds.y } };
       },
-      open: (_image, _select, cancel) => {
-        const ov = new BrowserWindow({ ...regionBounds, title: 'MeetingBot Region', frame: false,
+      open: (_image, _select, cancel, capture) => {
+        const ov = new BrowserWindow({ x: capture.origin?.x ?? 0, y: capture.origin?.y ?? 0,
+          width: capture.width, height: capture.height, title: 'MeetingBot Region', frame: false,
           show: false, focusable: process.platform !== 'win32', alwaysOnTop: true, skipTaskbar: true,
           transparent: process.platform === 'win32', backgroundColor: '#00000000',
           hasShadow: false, resizable: false, movable: false, fullscreenable: false, enableLargerThanScreen: true,
           webPreferences: { preload: join(__dirname, '../preload/index.js'), contextIsolation: true },
         });
         regionWin = ov;
+        prepareRegionWindow(ov, process.platform);
         ov.setContentProtection(true);
         ov.setAlwaysOnTop(true, 'screen-saver');
         ov.once('ready-to-show', () => { if (regionWin === ov && regionPicker.picking) ov.showInactive(); });
         ov.on('closed', () => { if (regionWin === ov) regionWin = null; cancel(); });
+        ov.on('unresponsive', () => { windowFaults?.record('region', 'selection-renderer-unresponsive'); cancel(); });
+        ov.webContents.on('render-process-gone', () => cancel());
         void ov.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(regionOverlayHtml(T().regionTip)))
           .catch(cancel);
-        return ov;
+        // Close must work even if its renderer is hung or has a beforeunload handler.
+        return { close: () => { if (!ov.isDestroyed()) ov.destroy(); } };
       },
     });
     cancelRegion = () => regionPicker.cancel();
@@ -950,6 +974,36 @@ function bootstrap(): void {
 
     // ---- LLM (R4): streaming answers; key stays in the main process ----
     const llmControllers = new Map<string, AbortController>();
+    recoverWindow = () => {
+      const target = win;
+      if (!target || target.isDestroyed() || recoveringView || quitting) return;
+      recoveringView = true;
+      cancelRegion();
+      for (const controller of llmControllers.values()) controller.abort();
+      llmControllers.clear();
+      markCaptureStopped();
+      if (process.platform === 'win32') setWindowMode('browse');
+      recoveryNotice = T().recoveredViewWarn;
+      windowFaults?.record('recovery', 'Interface recovery requested from tray; recording and generation stopped');
+      const reload = () => {
+        if (target.isDestroyed() || win !== target || quitting) return;
+        target.webContents.reload();
+        showWindow();
+      };
+      if (target.webContents.isCrashed()) reload();
+      else {
+        // Wait for the old process to exit. Reloading immediately can start a
+        // navigation in that process and lose it when the crash completes.
+        const gone = () => { clearTimeout(timeout); setImmediate(reload); };
+        const timeout = setTimeout(() => {
+          target.webContents.removeListener('render-process-gone', gone);
+          recoveringView = false;
+          windowFaults?.record('recovery-failed', 'Old renderer did not exit before recovery deadline');
+        }, 5000);
+        target.webContents.once('render-process-gone', gone);
+        target.webContents.forcefullyCrashRenderer();
+      }
+    };
     ipcMain.on(IPC.llmAsk, (_e, payload: LlmAskPayload) => {
       const sendEv = (ev: LlmEvent) => win?.webContents.send(IPC.llmEvent, ev);
       const apiKey = settings.getLlmApiKey();
@@ -1182,6 +1236,9 @@ function bootstrap(): void {
     tray.destroy();
     void asr.stop();
     void sidecar.stop();
+  });
+  app.on('child-process-gone', (_event, details) => {
+    if (details.type === 'GPU') windowFaults?.record('gpu-exit', `reason=${details.reason}; exitCode=${details.exitCode}`);
   });
 
   /**

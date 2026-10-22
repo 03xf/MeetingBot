@@ -63,13 +63,15 @@ export function clearQuestionTranscript(session: StoredSession): StoredSession {
 }
 
 export function loadQuestionSession(session: StoredSession, interruptedMessage: string): StoredSession {
+  let next = session;
   if (session.questionQueueVersion !== 1) {
     // No reliable cursor exists in old sessions. Keep their text, start collecting new speech.
-    return { ...session, segments: reindexSegments(session.segments ?? []).map((s) => ({ ...s, questionBoundary: true })), pendingQuestion: [], questionQueueVersion: 1, questionEpoch: 0 };
+    next = { ...session, segments: reindexSegments(session.segments ?? []).map((s) => ({ ...s, questionBoundary: true })), pendingQuestion: [], questionQueueVersion: 1, questionEpoch: 0 };
   }
-  let next = session;
-  for (const turn of session.turns) {
-    if (turn.status === 'streaming' && turn.questionBatch) next = restoreQuestion(next, turn.id, interruptedMessage);
+  for (const turn of next.turns) {
+    if (turn.status !== 'streaming') continue;
+    if (turn.questionBatch && session.questionQueueVersion === 1) next = restoreQuestion(next, turn.id, interruptedMessage);
+    else next = { ...next, turns: next.turns.map(t => t.id === turn.id ? { ...t, status: 'error', error: interruptedMessage } : t) };
   }
   return next;
 }
