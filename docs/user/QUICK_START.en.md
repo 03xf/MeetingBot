@@ -82,6 +82,8 @@ Review the summary and click "Enter MeetingBot". The wizard writes the whole pla
 
 ## Step 3 — your first meeting
 
+Windows beta.9 starts in **Browse mode**, with a non-focusable window. Answer, scroll, switch sessions and copy here; explicitly enter **Edit mode** to type, change settings or audio devices, or import files. Return to Browse afterwards. The first-run wizard is a normal focusable window. This is a test prerelease: native input acceptance in Edge / Chrome and platform tests on Feishu / Beisen remain pending. See the [release notes](../releases/v0.2.0-beta.9.md).
+
 1. Play something with speech in it (a meeting, a video, a podcast).
 2. Click **▶ Start** in the title bar; the Transcript pane on the left starts filling.
 3. Click **Cut & answer** to combine all other-party speech since the last submission. If an utterance is still in progress, the app actively finalizes its recorded portion and includes it even before subtitles appear. Recognition finishes before answering. Your microphone transcript is excluded; pauses never trigger answers.
@@ -95,7 +97,8 @@ Other title-bar controls:
 | `A:ZH` / `A:EN` | Language the AI answers in |
 | `Text` / `Vision` | Answer with the text LLM, or with the vision model (screenshot Q&A) |
 | `🎤Mic` | Transcribe your own voice separately |
-| `Stealth:On/Off` | Hides the window from recording / sharing / screenshots (Windows; best-effort on macOS) |
+| `Capture protection` | Controls recording capture protection; does not certify focus preservation or platform detection results |
+| `Browse mode` / `Edit mode` | Browse is non-focusable; explicit editing allows activation |
 | `—` | Hide the window; the hotkey or the tray icon brings it back |
 
 ---

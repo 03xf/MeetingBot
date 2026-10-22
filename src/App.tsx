@@ -6,6 +6,7 @@ import type {
   LlmAskPayload,
   PublicSettings,
   StoredSession,
+  WindowInteractionMode,
 } from '../shared/protocol';
 import {
   nextSegmentId,
@@ -83,11 +84,24 @@ export function App() {
   const [asr, setAsr] = useState<AsrUiState>({ phase: 'loading', workerState: 'loading' });
   const [capturing, setCapturing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [windowMode, setWindowMode] = useState<WindowInteractionMode>(window.mc.platform === 'win32' ? 'browse' : 'edit');
+  const requestEdit = useCallback(async () => {
+    const mode = await window.mc.setWindowMode('edit');
+    setWindowMode(mode);
+  }, []);
+  useEffect(() => {
+    const off = window.mc.onWindowModeChanged(setWindowMode);
+    void window.mc.getWindowMode().then(setWindowMode);
+    return off;
+  }, []);
   const [opacityPreview, setOpacityPreview] = useState<number | null>(null);
   const [showHealth, setShowHealth] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showKnowledge, setShowKnowledge] = useState(false);
+  useEffect(() => {
+    if (windowMode === 'browse') setShowSettings(false);
+  }, [windowMode]);
   const [showHud, setShowHud] = useState(true);
   const [hud, setHud] = useState<HudStats>({ count: 0 });
   const [waitingConfirmation, setWaitingConfirmation] = useState<string | null>(null);
@@ -404,7 +418,7 @@ export function App() {
     window.__mcAutoStart = () => void startCapture();
     // visual-QA hooks (MC_MAIN_SHOT in electron/main.ts): open a panel from the
     // main process so it can be screenshotted
-    window.__mcOpenSettings = () => setShowSettings(true);
+    window.__mcOpenSettings = () => { void requestEdit().then(() => setShowSettings(true)); };
     window.__mcOpenHelp = () => setShowHelp(true);
     return () => {
       off();
@@ -693,6 +707,7 @@ export function App() {
 
   const pickKb = useCallback(
     async (slot: KbSlot) => {
+      await requestEdit();
       const r = await window.mc.pickKnowledge(slot);
       if (!r) return;
       if (!r.text.trim()) {
@@ -814,6 +829,7 @@ export function App() {
           {captureKindForPlatform(window.mc.platform) === 'input' && mics.length > 0 && (
             <select
               className="mic-select"
+              disabled={windowMode === 'browse'}
               value={settings?.audio.themDeviceId ?? ''}
               onChange={(e) => void selectThemInput(e.target.value)}
               title={t.titlebar.themDeviceTitle}
@@ -854,6 +870,7 @@ export function App() {
           {micActive && mics.length > 0 && (
             <select
               className="mic-select"
+              disabled={windowMode === 'browse'}
               value={settings?.audio.micDeviceId ?? ''}
               onChange={(e) => void selectMic(e.target.value)}
               title={t.titlebar.micDeviceTitle}
@@ -880,7 +897,18 @@ export function App() {
           <button className="btn" onClick={() => setShowHud((v) => !v)} title={t.titlebar.hudTitle}>
             HUD
           </button>
-          <button className="btn" onClick={() => setShowSettings((v) => !v)} title={t.titlebar.settingsTitle}>
+          {window.mc.platform === 'win32' && <button
+            className={windowMode === 'edit' ? 'btn btn-on interaction-mode' : 'btn interaction-mode'}
+            title={t.titlebar.modeHint}
+            onClick={() => void window.mc.setWindowMode(windowMode === 'browse' ? 'edit' : 'browse').then((mode) => {
+              setWindowMode(mode);
+              if (mode === 'browse') closePanels();
+            })}
+          >{windowMode === 'browse' ? t.titlebar.browseMode : t.titlebar.editMode}</button>}
+          <button className="btn" onClick={() => {
+            if (showSettings) setShowSettings(false);
+            else void requestEdit().then(() => setShowSettings(true));
+          }} title={t.titlebar.settingsTitle}>
             ⚙
           </button>
           <button className="btn" onClick={() => window.mc.hide()} title={t.titlebar.hideTitle}>
@@ -914,7 +942,7 @@ export function App() {
           onClose={() => setShowHealth(false)}
           onOpenSettings={() => {
             setShowHealth(false);
-            setShowSettings(true);
+            void requestEdit().then(() => setShowSettings(true));
           }}
           onOpenDiagnostics={() => {
             setShowHealth(false);
@@ -926,14 +954,14 @@ export function App() {
 
       {showDiagnostics && <DiagnosticsPanel onClose={() => setShowDiagnostics(false)} />}
 
-      {showKnowledge && <KnowledgePanel onClose={() => setShowKnowledge(false)} />}
+      {showKnowledge && <KnowledgePanel editable={windowMode === 'edit'} onRequestEdit={requestEdit} onClose={() => setShowKnowledge(false)} />}
 
       {showHelp && (
         <HelpPanel
           onClose={() => setShowHelp(false)}
           onOpenSettings={() => {
             setShowHelp(false);
-            setShowSettings(true);
+            void requestEdit().then(() => setShowSettings(true));
           }}
           onOpenDiagnostics={() => {
             setShowHelp(false);
@@ -987,6 +1015,8 @@ export function App() {
           sessions={sessions}
           currentId={currentId}
           turns={current?.turns ?? []}
+          editable={windowMode === 'edit'}
+          onRequestEdit={requestEdit}
           onOpenKnowledge={() => {
             closePanels();
             setShowKnowledge(true);

@@ -38,7 +38,7 @@ export function DiagnosticsPanel({ onClose }: { onClose: () => void }) {
   const copy = async () => {
     if (!report) return;
     try {
-      await navigator.clipboard.writeText(report);
+      await window.mc.writeClipboardText(report);
       setNotice(t.diagnostics.copied);
     } catch (e) {
       setNotice(t.diagnostics.copyFail((e as Error).message));

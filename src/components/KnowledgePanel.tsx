@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { KnowledgeSummary, KnowledgeContext } from '../../shared/protocol';
 import { useT } from '../i18n';
 
-export function KnowledgePanel({ onClose }: { onClose: () => void }) {
+export function KnowledgePanel({ onClose, editable, onRequestEdit }: { onClose: () => void; editable: boolean; onRequestEdit: () => Promise<void> }) {
   const t = useT().knowledge;
   const [library, setLibrary] = useState<KnowledgeSummary | null>(null);
   const [busy, setBusy] = useState(false);
@@ -64,7 +64,8 @@ export function KnowledgePanel({ onClose }: { onClose: () => void }) {
         if (busy || !query.trim()) return;
         void run(async () => setPreview(await window.mc.searchKnowledge(query)));
       }}>
-        <input aria-label={t.searchPlaceholder} placeholder={t.searchPlaceholder} value={query} onChange={(e) => setQuery(e.target.value)} maxLength={2000} />
+        <input disabled={!editable} aria-label={t.searchPlaceholder} placeholder={t.searchPlaceholder} value={query} onChange={(e) => setQuery(e.target.value)} maxLength={2000} />
+        {!editable && <button type="button" className="btn" onClick={() => void onRequestEdit()}>✎</button>}
         <button className="btn" disabled={busy || !query.trim() || !library?.documents.length}>{t.search}</button>
       </form>
       <p className="settings-hint">{t.searchHint}</p>

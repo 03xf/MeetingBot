@@ -7,7 +7,7 @@ import type { TrayMenuLabels } from '../shared/trayMenu';
  * engine diagnostics stay untranslated on purpose.
  */
 const zh = {
-  regionTip: '拖动框选要识别的区域 · Esc 取消',
+  regionTip: '拖动框选要识别的区域 · 右键或再次按截图快捷键取消',
   kbImportTitle: '导入个人知识库（可多选文档）',
   docFilter: '文档',
   pickResumeTitle: '导入我的简历（md/txt/docx/pdf）',
@@ -43,7 +43,7 @@ const zh = {
 type MainDict = typeof zh;
 
 const en: MainDict = {
-  regionTip: 'Drag to select a region · Esc to cancel',
+  regionTip: 'Drag to select · Right click or press the screenshot hotkey again to cancel',
   kbImportTitle: 'Import personal knowledge documents (multiple files)',
   docFilter: 'Documents',
   pickResumeTitle: 'Import my resume (md/txt/docx/pdf)',

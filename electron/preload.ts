@@ -17,9 +17,14 @@ import {
   type SessionsFile,
   type SettingsPatch,
   type TrayCommandPayload,
+  type WindowInteractionMode,
 } from '../shared/protocol';
 
 export interface McApi {
+  getWindowMode(): Promise<WindowInteractionMode>;
+  setWindowMode(mode: WindowInteractionMode): Promise<WindowInteractionMode>;
+  onWindowModeChanged(cb: (mode: WindowInteractionMode) => void): () => void;
+  writeClipboardText(text: string): Promise<void>;
   readonly platform: NodeJS.Platform;
   getSettings(): Promise<PublicSettings>;
   setSettings(patch: SettingsPatch): Promise<PublicSettings>;
@@ -93,6 +98,14 @@ export interface McApi {
 }
 
 const api: McApi = {
+  getWindowMode: () => ipcRenderer.invoke(IPC.windowModeGet),
+  setWindowMode: (mode) => ipcRenderer.invoke(IPC.windowModeSet, mode),
+  onWindowModeChanged: (cb) => {
+    const listener = (_e: Electron.IpcRendererEvent, mode: WindowInteractionMode) => cb(mode);
+    ipcRenderer.on(IPC.windowModeChanged, listener);
+    return () => ipcRenderer.removeListener(IPC.windowModeChanged, listener);
+  },
+  writeClipboardText: (text) => ipcRenderer.invoke(IPC.clipboardWriteText, text),
   platform: process.platform,
   getSettings: () => ipcRenderer.invoke(IPC.settingsGet),
   setSettings: (patch) => ipcRenderer.invoke(IPC.settingsSet, patch),

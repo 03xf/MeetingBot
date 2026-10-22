@@ -23,6 +23,9 @@ import {
   whisperExecutionProvidersForPlatform,
 } from '../shared/platform';
 import { AsrHost } from './asrHost';
+import { displayWindow } from './windowInteraction';
+import { RegionCapture } from './regionCapture';
+import type { WindowInteractionMode } from '../shared/protocol';
 import {
   LocalPythonProbe,
   buildDiagnosticsReport,
@@ -81,18 +84,20 @@ html,body{margin:0;height:100%;overflow:hidden;cursor:crosshair;user-select:none
 #img{position:fixed;inset:0;width:100vw;height:100vh;object-fit:fill}
 #dim{position:fixed;inset:0;background:rgba(0,0,0,0.35)}
 #sel{position:fixed;display:none;border:2px solid #2a6df4;box-shadow:0 0 0 9999px rgba(0,0,0,0.35)}
-#tip{position:fixed;top:14px;left:50%;transform:translateX(-50%);color:#fff;background:rgba(0,0,0,0.65);padding:6px 14px;border-radius:8px;font:13px 'Microsoft YaHei',sans-serif;z-index:9}
+#cancel{position:fixed;right:18px;top:14px;z-index:10;background:#202632;color:white;border:1px solid #8b95ab;padding:7px 14px;border-radius:7px;cursor:pointer}\n#tip{position:fixed;top:14px;left:50%;transform:translateX(-50%);color:#fff;background:rgba(0,0,0,0.65);padding:6px 14px;border-radius:8px;font:13px 'Microsoft YaHei',sans-serif;z-index:9}
 </style></head><body>
 <img id="img"/><div id="dim"></div><div id="sel"></div>
-<div id="tip">${tip}</div>
+<div id="tip">${tip}</div><button id="cancel">✕ Cancel / 取消</button>
 <script>
 (async()=>{try{const u=await window.mc.regionImage();if(u){document.getElementById('img').src=u;}}catch(e){}})();
 let sx,sy,drag=false;const sel=document.getElementById('sel'),dim=document.getElementById('dim');
 function rect(e){return{x:Math.min(sx,e.clientX),y:Math.min(sy,e.clientY),width:Math.abs(e.clientX-sx),height:Math.abs(e.clientY-sy)};}
 function upd(e){const r=rect(e);sel.style.left=r.x+'px';sel.style.top=r.y+'px';sel.style.width=r.width+'px';sel.style.height=r.height+'px';}
-addEventListener('mousedown',e=>{drag=true;sx=e.clientX;sy=e.clientY;dim.style.display='none';sel.style.display='block';upd(e);});
+document.getElementById('cancel').onclick=()=>window.mc.regionCancel();
+addEventListener('contextmenu',e=>{e.preventDefault();window.mc.regionCancel();});
+addEventListener('mousedown',e=>{if(e.button!==0||e.target.closest('button'))return;drag=true;sx=e.clientX;sy=e.clientY;dim.style.display='none';sel.style.display='block';upd(e);});
 addEventListener('mousemove',e=>{if(drag)upd(e);});
-addEventListener('mouseup',e=>{if(!drag)return;drag=false;const r=rect(e);if(r.width>4&&r.height>4)window.mc.regionRect(r);else window.mc.regionCancel();});
+addEventListener('mouseup',e=>{if(e.button!==0||!drag)return;drag=false;const r=rect(e);if(r.width>4&&r.height>4)window.mc.regionRect(r);else window.mc.regionCancel();});
 addEventListener('keydown',e=>{if(e.key==='Escape')window.mc.regionCancel();});
 </script></body></html>`;
 
@@ -130,6 +135,19 @@ function bootstrap(): void {
   const asr = new AsrHost();
   const sidecar = new FunasrSidecar();
   const tray = new AppTray();
+  let windowMode: WindowInteractionMode = process.platform === 'win32' ? 'browse' : 'edit';
+  let cancelRegion = () => {};
+  let regionIsActive = () => false;
+
+  function setWindowMode(mode: WindowInteractionMode): WindowInteractionMode {
+    if (mode !== 'browse' && mode !== 'edit') throw new Error('Invalid window mode');
+    if (mode === 'browse' && process.platform !== 'win32') throw new Error('Browse mode is supported on Windows only');
+    windowMode = mode;
+    win?.setFocusable(mode === 'edit');
+    if (mode === 'edit' && win) displayWindow(win, mode);
+    win?.webContents.send(IPC.windowModeChanged, mode);
+    return mode;
+  }
 
   /** main-process strings in the current UI language */
   const T = () => mainStrings(settings.data.ui.lang, osLang);
@@ -225,14 +243,16 @@ function bootstrap(): void {
 
   function showWindow(): void {
     if (!win) return;
-    if (win.isMinimized()) win.restore();
-    win.show();
-    win.focus();
+    if (process.platform === 'win32' && windowMode !== 'browse') setWindowMode('browse');
+    displayWindow(win, windowMode);
   }
 
   function toggleWindow(): void {
     if (!win) return;
-    if (win.isVisible()) win.hide();
+    if (win.isVisible()) {
+      if (process.platform === 'win32') setWindowMode('browse');
+      win.hide();
+    }
     else showWindow();
   }
 
@@ -261,7 +281,8 @@ function bootstrap(): void {
     if (isRendererCommand(command)) {
       // capture, sessions and the panels live in the renderer; a hidden window
       // would swallow the result, so make it visible first
-      showWindow();
+      if (command === 'open-settings') setWindowMode('edit');
+      else showWindow();
       win?.webContents.send(IPC.trayCommand, { command });
     }
   }
@@ -327,7 +348,10 @@ function bootstrap(): void {
         if (!ok) console.warn(`[main] hotkey ${toggle} registration failed (in use?)`);
       }
       if (shot) {
-        const ok = globalShortcut.register(shot, () => win?.webContents.send(IPC.shotHotkey));
+        const ok = globalShortcut.register(shot, () => {
+          if (regionIsActive()) cancelRegion();
+          else win?.webContents.send(IPC.shotHotkey);
+        });
         if (!ok) console.warn(`[main] shot hotkey ${shot} registration failed (in use?)`);
       }
     } catch (e) {
@@ -342,6 +366,8 @@ function bootstrap(): void {
       minWidth: 640,
       minHeight: 380,
       frame: false,
+      show: false,
+      focusable: windowMode === 'edit',
       transparent: true,
       backgroundColor: '#00000000',
       alwaysOnTop: true,
@@ -355,6 +381,7 @@ function bootstrap(): void {
         backgroundThrottling: false,
       },
     });
+    win.once('ready-to-show', () => showWindow());
     win.setAlwaysOnTop(true, 'screen-saver');
     win.setContentProtection(settings.data.ui.stealth);
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
@@ -512,7 +539,7 @@ function bootstrap(): void {
           pendingAsrRestart = false;
           void asr.stop().then(() => startAsr());
         }
-        win?.focus();
+        showWindow();
         return;
       }
       // first-run launch closed without finishing => nothing is configured and
@@ -628,6 +655,11 @@ function bootstrap(): void {
       }
       asr.flush();
     });
+    ipcMain.handle(IPC.windowModeGet, () => windowMode);
+    ipcMain.handle(IPC.windowModeSet, (e, mode: WindowInteractionMode) => {
+      if (e.sender !== win?.webContents) throw new Error('Invalid window mode sender');
+      return setWindowMode(mode);
+    });
     ipcMain.handle(IPC.settingsGet, () => publicSettings());
     // pull-based replay: renderer asks after subscribing, so instant-ready
     // cloud engines can't race the subscription (stuck "模型加载中" bug)
@@ -710,6 +742,10 @@ function bootstrap(): void {
     ipcMain.handle(IPC.externalOpen, (_e, url: unknown) => openExternalUrl(url));
     // read on an explicit paste-button click only — never polled
     ipcMain.handle(IPC.clipboardReadText, () => clipboard.readText());
+    ipcMain.handle(IPC.clipboardWriteText, (e, text: string) => {
+      if (e.sender !== win?.webContents || typeof text !== 'string' || text.length > 10_000_000) throw new Error('Invalid clipboard write');
+      clipboard.writeText(text);
+    });
     ipcMain.handle(
       IPC.appGetInfo,
       (): AppInfo => ({
@@ -818,6 +854,7 @@ function bootstrap(): void {
       return knowledge.summary();
     });
     ipcMain.handle(IPC.knowledgeImport, async (): Promise<KnowledgeImportResult> => {
+      setWindowMode('edit');
       const r = await dialog.showOpenDialog({
         title: T().kbImportTitle,
         filters: [{ name: T().docFilter, extensions: [...DOC_EXTENSIONS] }],
@@ -840,6 +877,7 @@ function bootstrap(): void {
       return knowledge.summary();
     });
     ipcMain.handle(IPC.knowledgePick, async (_e, slot: 'resume' | 'jd' = 'resume') => {
+      setWindowMode('edit');
       const r = await dialog.showOpenDialog({
         title: slot === 'jd' ? T().pickJdTitle : T().pickResumeTitle,
         filters: [{ name: T().docFilter, extensions: [...DOC_EXTENSIONS] }],
@@ -863,89 +901,51 @@ function bootstrap(): void {
     // on a STEALTH overlay that shows the capture as its (opaque) background —
     // avoids the transparent-window black-screen bug and is excluded from
     // recording via content protection. Returns the cropped image dataURL. ----
-    let regionResolve: ((r: { x: number; y: number; width: number; height: number } | null) => void) | null = null;
-    let pendingRegionImage: string | null = null;
     let regionWin: BrowserWindow | null = null;
-
-    ipcMain.handle(IPC.regionImage, () => pendingRegionImage);
-    ipcMain.on(IPC.regionRect, (_e, r) => {
-      const f = regionResolve;
-      regionResolve = null;
-      regionWin?.close();
-      f?.(r);
-    });
-    ipcMain.on(IPC.regionCancel, () => {
-      const f = regionResolve;
-      regionResolve = null;
-      regionWin?.close();
-      f?.(null);
-    });
-
-    ipcMain.handle(IPC.regionPick, async () => {
-      const disp = screen.getPrimaryDisplay();
-      const sf = disp.scaleFactor;
-      const w = Math.round(disp.size.width * sf);
-      const h = Math.round(disp.size.height * sf);
-      const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: w, height: h } });
-      const src = sources.find((s) => s.display_id === String(disp.id)) ?? sources[0];
-      if (!src) return null;
-      const full = src.thumbnail;
-      pendingRegionImage = full.toDataURL();
-
-      const rect = await new Promise<{ x: number; y: number; width: number; height: number } | null>((resolve) => {
-        regionResolve = resolve;
-        const b = disp.bounds;
-        const ov = new BrowserWindow({
-          x: b.x,
-          y: b.y,
-          width: b.width,
-          height: b.height,
-          frame: false,
-          alwaysOnTop: true,
-          skipTaskbar: true,
-          hasShadow: false,
-          resizable: false,
-          movable: false,
-          fullscreenable: false,
-          enableLargerThanScreen: true,
+    let regionBounds = screen.getPrimaryDisplay().bounds;
+    const regionPicker = new RegionCapture({
+      capture: async () => {
+        const disp = screen.getPrimaryDisplay();
+        regionBounds = disp.bounds;
+        const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: {
+          width: Math.round(disp.size.width * disp.scaleFactor), height: Math.round(disp.size.height * disp.scaleFactor),
+        } });
+        const src = sources.find((s) => s.display_id === String(disp.id)) ?? sources[0];
+        if (!src || src.thumbnail.isEmpty()) throw new Error('No screen capture available');
+        return { image: src.thumbnail, width: disp.size.width, height: disp.size.height, scale: disp.scaleFactor };
+      },
+      open: (_image, _select, cancel) => {
+        const ov = new BrowserWindow({ ...regionBounds, title: 'MeetingBot Region', frame: false,
+          show: false, focusable: process.platform !== 'win32', alwaysOnTop: true, skipTaskbar: true,
+          transparent: process.platform === 'win32', backgroundColor: '#00000000',
+          hasShadow: false, resizable: false, movable: false, fullscreenable: false, enableLargerThanScreen: true,
           webPreferences: { preload: join(__dirname, '../preload/index.js'), contextIsolation: true },
         });
         regionWin = ov;
-        ov.setContentProtection(true); // selection overlay invisible to recording
+        ov.setContentProtection(true);
         ov.setAlwaysOnTop(true, 'screen-saver');
-        ov.on('closed', () => {
-          if (regionResolve) {
-            const f = regionResolve;
-            regionResolve = null;
-            f(null);
-          }
-          regionWin = null;
-        });
-        void ov.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(regionOverlayHtml(T().regionTip)));
-      });
-
-      const img = pendingRegionImage;
-      pendingRegionImage = null;
-      if (!rect || rect.width < 4 || rect.height < 4 || !img) return null;
-      try {
-        const cropped = full.crop({
-          x: Math.round(rect.x * sf),
-          y: Math.round(rect.y * sf),
-          width: Math.round(rect.width * sf),
-          height: Math.round(rect.height * sf),
-        });
-        return cropped.toDataURL();
-      } catch (e) {
-        console.error('[region] crop failed:', (e as Error).message);
-        return null;
-      }
+        ov.once('ready-to-show', () => { if (regionWin === ov && regionPicker.picking) ov.showInactive(); });
+        ov.on('closed', () => { if (regionWin === ov) regionWin = null; cancel(); });
+        void ov.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(regionOverlayHtml(T().regionTip)))
+          .catch(cancel);
+        return ov;
+      },
     });
+    cancelRegion = () => regionPicker.cancel();
+    regionIsActive = () => regionPicker.picking;
+    ipcMain.handle(IPC.regionImage, (e) => e.sender === regionWin?.webContents ? regionPicker.image : null);
+    ipcMain.on(IPC.regionRect, (e, rect) => { if (e.sender === regionWin?.webContents) regionPicker.select(rect); });
+    ipcMain.on(IPC.regionCancel, (e) => { if (e.sender === regionWin?.webContents) regionPicker.cancel(); });
+    ipcMain.handle(IPC.regionPick, (e) => e.sender === win?.webContents ? regionPicker.pick() : null);
     ipcMain.handle(IPC.stealthSet, (_e, on: boolean) => {
       settings.applyPatch({ ui: { stealth: on } });
       win?.setContentProtection(on);
       return on;
     });
-    ipcMain.on(IPC.winHide, () => win?.hide());
+    ipcMain.on(IPC.winHide, () => {
+      if (process.platform === 'win32') setWindowMode('browse');
+      win?.hide();
+    });
     ipcMain.on(IPC.appQuit, () => app.quit());
 
     // ---- LLM (R4): streaming answers; key stays in the main process ----
@@ -1168,14 +1168,16 @@ function bootstrap(): void {
   });
 
   app.on('second-instance', () => {
-    const target = setupWin ?? win;
-    if (target?.isMinimized()) target.restore();
-    target?.show();
-    target?.focus();
+    if (setupWin) {
+      if (setupWin.isMinimized()) setupWin.restore();
+      setupWin.show();
+      setupWin.focus();
+    } else showWindow();
   });
 
   app.on('before-quit', () => {
     quitting = true;
+    cancelRegion();
     globalShortcut.unregisterAll();
     tray.destroy();
     void asr.stop();

@@ -44,7 +44,7 @@ function CodeBlock({ code, language, labels }: { code: string; language: string;
   const copy = async () => {
     clearTimeout(timer.current);
     try {
-      await navigator.clipboard.writeText(code);
+      await window.mc.writeClipboardText(code);
       setCopyState('copied');
     } catch { setCopyState('failed'); }
     timer.current = setTimeout(() => setCopyState('idle'), 2000);

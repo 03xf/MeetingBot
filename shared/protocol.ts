@@ -3,6 +3,7 @@
  * Version this file; breaking changes bump PROTOCOL_VERSION.
  */
 export const PROTOCOL_VERSION = 1;
+export type WindowInteractionMode = 'browse' | 'edit';
 
 import type { ProviderCapability, ProviderId } from './providerCatalog';
 export type { ProviderCapability, ProviderId } from './providerCatalog';
@@ -547,6 +548,10 @@ export interface TrayCommandPayload {
 // ---------- IPC channel names ----------
 
 export const IPC = {
+  windowModeGet: 'window:mode-get',
+  windowModeSet: 'window:mode-set',
+  windowModeChanged: 'window:mode-changed',
+  clipboardWriteText: 'app:clipboard-write',
   /** renderer -> main, fire and forget: (ArrayBuffer pcmF32, captureTs, Speaker) */
   capturePcm: 'capture:pcm',
   /** invoke: (text) => string — cheap one-shot translation to Chinese (inline, off-session) */

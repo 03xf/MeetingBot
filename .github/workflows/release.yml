@@ -37,7 +37,7 @@ jobs:
       - name: Python sidecar tests
         run: npm run test:python
 
-      - name: Verify custom instructions and background transparency
+      - name: Verify custom instructions, transparency and mode state
         run: npm run smoke:custom-prompt
 
       - name: Build installers
@@ -57,6 +57,7 @@ jobs:
             Set-Content -Path "$($_.FullName).sha256" -Value $line -Encoding ascii
             Write-Host $line
           }
+          Copy-Item -LiteralPath docs/user/MeetingBot-focus-check.html -Destination release/MeetingBot-focus-check.html
 
       - uses: actions/upload-artifact@v4
         with:
@@ -64,6 +65,7 @@ jobs:
           path: |
             release/*.exe
             release/*.exe.sha256
+            release/MeetingBot-focus-check.html
           if-no-files-found: error
           retention-days: 14
 

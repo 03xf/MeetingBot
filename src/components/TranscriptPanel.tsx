@@ -124,7 +124,7 @@ export function TranscriptPanel({
                 title={t.transcript.bubbleTitle}
                 onClick={() => {
                   if (!window.getSelection()?.toString().trim()) {
-                    void navigator.clipboard.writeText(s.text);
+                    void window.mc.writeClipboardText(s.text);
                   }
                 }}
               >

@@ -38,6 +38,8 @@ export function AnswerSession({
   onFreeAsk,
   onShotAsk,
   onOpenKnowledge,
+  editable,
+  onRequestEdit,
 }: {
   sessions: StoredSession[];
   currentId: string;
@@ -63,6 +65,8 @@ export function AnswerSession({
   onFreeAsk: (question: string) => void;
   onShotAsk: (question: string, imageDataUrl?: string) => void;
   onOpenKnowledge: () => void;
+  editable: boolean;
+  onRequestEdit: () => Promise<void>;
 }) {
   const t = useT();
   const boxRef = useRef<HTMLDivElement>(null);
@@ -70,7 +74,16 @@ export function AnswerSession({
   const inputRef = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const currentName = sessions.find((s) => s.id === currentId)?.name ?? '';
+  useEffect(() => { if (!editable) setEditing(false); }, [editable]);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (e: MouseEvent) => { if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [menuOpen]);
 
   useEffect(() => {
     if (stick.current && boxRef.current) boxRef.current.scrollTop = boxRef.current.scrollHeight;
@@ -112,22 +125,19 @@ export function AnswerSession({
             }}
           />
         ) : (
-          <select
-            className="session-select"
-            value={currentId}
-            onChange={(e) => onSwitch(e.target.value)}
-            title={t.answer.switchTitle}
-          >
-            {sessions.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+          <div className="session-picker" ref={menuRef}>
+            <button className="session-select" title={t.answer.switchTitle} aria-haspopup="listbox"
+              aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)}>{currentName} ▾</button>
+            {menuOpen && <div className="session-menu" role="listbox" aria-label={t.answer.switchTitle}>
+              {sessions.map((s) => <button className="session-option" key={s.id} role="option" aria-selected={s.id === currentId}
+                onClick={() => { onSwitch(s.id); setMenuOpen(false); }}>{s.name}</button>)}
+            </div>}
+          </div>
         )}
         <button
           className="btn btn-sm"
-          onClick={() => {
+          onClick={async () => {
+            await onRequestEdit();
             setNameDraft(currentName);
             setEditing(true);
           }}
@@ -199,7 +209,7 @@ export function AnswerSession({
                 ) : (
                   <button
                     className="btn btn-sm"
-                    onClick={() => void navigator.clipboard.writeText(turn.text)}
+                    onClick={() => void window.mc.writeClipboardText(turn.text)}
                     title={t.answer.copyTitle}
                   >
                     {t.answer.copy}
@@ -237,15 +247,16 @@ export function AnswerSession({
       <div className="answer-input">
         <input
           ref={inputRef}
-          disabled={!answersReady}
+          disabled={!answersReady || !editable}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.nativeEvent.isComposing) submit();
           }}
-          placeholder={answersReady ? t.answer.freePlaceholder : answersHint}
+          placeholder={!editable ? t.titlebar.editRequired : answersReady ? t.answer.freePlaceholder : answersHint}
         />
+        {!editable && <button className="btn" onClick={() => void onRequestEdit()}>{t.titlebar.enterEdit}</button>}
         <button
           className="btn btn-primary"
-          disabled={!answersReady}
+          disabled={!answersReady || !editable}
           title={answersReady ? undefined : answersHint}
           onClick={submit}
         >

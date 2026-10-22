@@ -19,7 +19,7 @@ Live transcription of the other side · first-person teleprompter answers · cap
 
 ## Download
 
-> **v0.2.0-beta.8: adjustable background transparency.** Drag the slider in **Settings → Background transparency** to preview, then Save to keep it after restart. Text, buttons and solid code blocks retain their opacity. Custom instructions, personal knowledge and active audio cuts remain available. See the [release notes (中文)](docs/releases/v0.2.0-beta.8.md). The upstream demos below show the older automatic answering mode, now replaced by manual confirmation.
+> **v0.2.0-beta.9: Windows browse / edit mode test prerelease.** Browse mode uses non-focusable windows and inactive display paths; explicitly enter Edit for typing or settings. Native mouse / hotkey focus acceptance in Edge and Chrome is pending; Feishu and Beisen are untested. Download the installers and offline focus-check page from the [beta.9 release](https://github.com/03xf/MeetingBot/releases/tag/v0.2.0-beta.9), and read the [release notes (中文)](docs/releases/v0.2.0-beta.9.md). Custom instructions, personal knowledge, active audio cuts and background transparency remain available. The upstream demos below show the older automatic answering mode, now replaced by manual confirmation.
 
 > **Personal knowledge edition:** This repository extends [JWM0203/MeetingCopilot](https://github.com/JWM0203/MeetingCopilot) with a shared, multi-document personal library, local retrieval, knowledge-first answering and inspectable reference passages. See the [personal knowledge guide (中文)](docs/user/PERSONAL_KNOWLEDGE.zh-CN.md). The Windows downloads below are built from this enhanced edition.
 

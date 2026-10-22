@@ -17,7 +17,7 @@ if (!process.versions.electron) {
     if (result.error) throw result.error;
     if (result.status !== 0) process.exit(result.status ?? 1);
   }
-  console.log('[custom-prompt] UI save, real model requests and restart passed; transparency preview, rollback, both themes and persistence passed');
+  console.log('[custom-prompt] UI save, real model requests and restart passed; transparency preview, rollback, both themes and persistence passed; browse/edit IPC and renderer state passed (programmatic, not native focus acceptance)');
 } else {
   void run().catch(error => { console.error(error); require('electron').app.exit(1); });
 }
@@ -77,11 +77,34 @@ async function run() {
   }] }));
   app.on('browser-window-created', (_event, window) => { if (!win) win = window; });
   require('../out/main/index.js');
-  await until(async () => win && await js('typeof window.__mcOpenSettings === "function"'), 'main UI');
+  await until(async () => win && await js('typeof window.__mcOpenSettings === "function" && !!document.querySelector(".answer-code-block") && document.querySelector(".session-picker > button").textContent.includes("界面验证")'), 'main UI and loaded sessions');
   assert.equal(app.getName(), 'MeetingBot');
   assert.equal(app.getPath('userData'), profile);
   assert.equal(await js('document.title'), 'MeetingBot');
   assert.equal(await js('document.querySelector(".brand").textContent'), 'MeetingBot');
+  if (process.platform === 'win32') {
+    assert.equal(await js('window.mc.getWindowMode()'), 'browse', 'every launch must default to browse');
+    assert.equal(win.isFocusable(), false);
+    await until(() => js('document.querySelector(".answer-input input").disabled'), 'browse input disabled');
+    await assert.rejects(js('window.mc.setWindowMode("invalid")'), /Invalid window mode/);
+    await js('document.querySelector(".session-picker > button").click()');
+    try { await until(() => js('!!document.querySelector(".session-menu")'), 'in-page session menu'); }
+    catch (error) {
+      console.error('[mode-state]', await js('JSON.stringify({picker:document.querySelector(".session-picker").outerHTML,mode:document.querySelector(".interaction-mode").textContent,visibility:document.visibilityState})'));
+      throw error;
+    }
+    assert.equal(win.isFocusable(), false, 'opening the menu must not enable focus');
+    await js('document.querySelector(".session-option").click()');
+    await until(() => js('!document.querySelector(".session-menu")'), 'session selection');
+    await js('window.__mcOpenSettings()');
+    await until(() => js('!!document.querySelector("#custom-answer-prompt")'), 'explicit settings editing');
+    assert.equal(await js('window.mc.getWindowMode()'), 'edit');
+    assert.equal(win.isFocusable(), true);
+    await js('document.querySelector(".interaction-mode").click()');
+    await until(() => js('!document.querySelector("#custom-answer-prompt") && document.querySelector(".answer-input input").disabled'), 'return to browse');
+    assert.equal(await js('window.mc.getWindowMode()'), 'browse');
+    assert.equal(win.isFocusable(), false);
+  }
 
   async function open() {
     await js('window.__mcOpenSettings()');
