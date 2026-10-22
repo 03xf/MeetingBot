@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { displayWindow, prepareRegionWindow } from '../electron/windowInteraction';
+import { displayWindow, prepareRegionWindow, TrayWindowVisibility } from '../electron/windowInteraction';
 import { RegionCapture } from '../electron/regionCapture';
 
 describe('window activation policy', () => {
-  const window = (focusable = true) => ({ isFocusable: () => focusable, setFocusable: vi.fn(), showInactive: vi.fn(), show: vi.fn(), focus: vi.fn(), isMinimized: () => true, restore: vi.fn() });
+  const window = (focusable = true) => ({ isVisible: () => false, isFocusable: () => focusable, setFocusable: vi.fn(), showInactive: vi.fn(), show: vi.fn(), focus: vi.fn(), isMinimized: () => true, restore: vi.fn() });
   it('shows a browsing window without activation or a restore that could activate it', () => {
     const w = window(); displayWindow(w, 'browse');
     expect(w.setFocusable).toHaveBeenCalledWith(false);
@@ -24,6 +24,27 @@ describe('window activation policy', () => {
     const setOpacity = vi.fn(); prepareRegionWindow({ setOpacity }, 'win32');
     expect(setOpacity).toHaveBeenCalledWith(0.99);
     setOpacity.mockClear(); prepareRegionWindow({ setOpacity }, 'darwin'); expect(setOpacity).not.toHaveBeenCalled();
+  });
+  it('keeps a parked Windows render widget mapped while restoring visibility and mouse input', () => {
+    let nativeVisible = false;
+    const w = { ...window(false), isVisible: () => nativeVisible, hide: vi.fn(), setOpacity: vi.fn(), setIgnoreMouseEvents: vi.fn() };
+    w.showInactive.mockImplementation(() => { nativeVisible = true; });
+    const changed = vi.fn(); const visibility = new TrayWindowVisibility(w, 'win32', changed);
+    visibility.show('browse');
+    for (let n = 0; n < 20; n++) {
+      visibility.hide(); expect(visibility.visible).toBe(false);
+      expect(w.setOpacity).toHaveBeenLastCalledWith(0); expect(w.setIgnoreMouseEvents).toHaveBeenLastCalledWith(true);
+      visibility.show('browse'); expect(visibility.visible).toBe(true);
+      expect(w.setOpacity).toHaveBeenLastCalledWith(1); expect(w.setIgnoreMouseEvents).toHaveBeenLastCalledWith(false);
+    }
+    expect(w.hide).not.toHaveBeenCalled(); expect(w.showInactive).toHaveBeenCalledOnce();
+    expect(w.show).not.toHaveBeenCalled(); expect(w.focus).not.toHaveBeenCalled();
+    visibility.hide(); visibility.hide(); expect(changed.mock.calls.filter(([shown]) => !shown)).toHaveLength(21);
+  });
+  it('retains native hiding outside Windows', () => {
+    const w = { ...window(), hide: vi.fn(), setOpacity: vi.fn(), setIgnoreMouseEvents: vi.fn() };
+    const visibility = new TrayWindowVisibility(w, 'darwin', vi.fn()); visibility.show('edit'); visibility.hide();
+    expect(w.hide).toHaveBeenCalledOnce(); expect(w.setOpacity).not.toHaveBeenCalled(); expect(w.setIgnoreMouseEvents).not.toHaveBeenCalled();
   });
 });
 

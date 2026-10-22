@@ -408,7 +408,7 @@ describe('runProviderTest — vision', () => {
         },
       }),
     );
-    expect(r).toMatchObject({ ok: false, code: 'PERMISSION_DENIED', retryable: false });
+    expect(r).toMatchObject({ ok: false, code: 'PERMISSION_DENIED', retryable: false, httpStatus: 403 });
   });
 });
 

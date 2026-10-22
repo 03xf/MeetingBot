@@ -60,6 +60,13 @@ describe('normalizeProviderError — HTTP status table', () => {
 });
 
 describe('normalizeProviderError — transport failures', () => {
+  it('classifies retired models and preserves safe HTTP/transport identifiers', () => {
+    expect(normalizeProviderError(httpError('Vision', 410, '{"error":{"code":"model_retired"}}'), VIS))
+      .toMatchObject({ code: 'MODEL_NOT_FOUND', httpStatus: 410, retryable: false });
+    expect(normalizeProviderError(httpError('Vision', 400, '{"error":{"code":"model_retired"}}'), VIS).code).toBe('MODEL_NOT_FOUND');
+    expect(normalizeProviderError(new Error('net::ERR_CONNECTION_RESET'), VIS))
+      .toMatchObject({ code: 'NETWORK_UNREACHABLE', transportCode: 'ERR_CONNECTION_RESET' });
+  });
   const cases: [string, unknown, ProviderTestCode][] = [
     ['ENOTFOUND', fetchError('ENOTFOUND', 'getaddrinfo ENOTFOUND api.deepseek.com'), 'DNS_ERROR'],
     ['EAI_AGAIN', fetchError('EAI_AGAIN', 'getaddrinfo EAI_AGAIN api.deepseek.com'), 'DNS_ERROR'],

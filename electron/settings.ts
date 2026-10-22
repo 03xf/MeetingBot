@@ -196,6 +196,7 @@ export class SettingsStore {
   data: SettingsFile;
   /** true when this boot upgraded a v1 file (main logs it once) */
   readonly migratedFromV1: boolean = false;
+  readonly migratedMimoModels: boolean;
   /** raw v1 text kept until the first v2 save writes settings.json.bak */
   private pendingBackup: string | null = null;
 
@@ -208,13 +209,26 @@ export class SettingsStore {
     const loaded = this.loadFromDisk();
     this.data = loaded.data;
     this.migratedFromV1 = loaded.migrated;
-    if (loaded.migrated) {
+    // These two official model IDs were retired on 2026-10-21. Only update
+    // the exact official endpoint; relays/custom models and ASR stay intact.
+    this.migratedMimoModels = false;
+    for (const slot of [this.data.llm, this.data.vision]) {
+      if (slot.baseUrl?.trim().replace(/\/+$/, '').toLowerCase() !== 'https://api.xiaomimimo.com/v1') continue;
+      const replacement = slot.model === 'mimo-v2.5' ? 'mimo-v2.6-flash'
+        : slot.model === 'mimo-v2.5-pro' ? 'mimo-v2.6-pro' : undefined;
+      if (!replacement) continue;
+      slot.model = replacement;
+      slot.providerId = 'mimo';
+      slot.verification = undefined;
+      this.migratedMimoModels = true;
+    }
+    if (loaded.migrated || this.migratedMimoModels) {
       // persist eagerly so the .bak escape hatch exists immediately; a failure
       // here (read-only dir) must never take the app down
       try {
         this.save();
       } catch (e) {
-        console.warn('[settings] could not persist the v2 migration:', (e as Error).message);
+        console.warn('[settings] could not persist settings migration:', (e as Error).message);
       }
     }
   }

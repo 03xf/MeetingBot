@@ -82,7 +82,7 @@ Review the summary and click "Enter MeetingBot". The wizard writes the whole pla
 
 ## Step 3 — your first meeting
 
-Windows beta.10 starts in **Browse mode**, with a non-focusable window. Answer, scroll, switch sessions and copy here; explicitly enter **Edit mode** to type, change settings or audio devices, or import files. Return to Browse afterwards. The first-run wizard is a normal focusable window. This is a test prerelease: native input acceptance in Edge / Chrome and platform tests on Feishu / Beisen remain pending. See the [release notes](../releases/v0.2.0-beta.10.md).
+Windows beta.11 starts in **Browse mode**, with a non-focusable window. Answer, scroll, switch sessions and copy here; explicitly enter **Edit mode** to type, change settings or audio devices, or import files. Return to Browse afterwards. The first-run wizard is a normal focusable window. This is a test prerelease: native input acceptance in Edge / Chrome and platform tests on Feishu / Beisen remain pending. See the [release notes](../releases/v0.2.0-beta.11.md).
 
 1. Play something with speech in it (a meeting, a video, a podcast).
 2. Click **▶ Start** in the title bar; the Transcript pane on the left starts filling.

@@ -100,6 +100,10 @@ If another app already owns that hotkey, registration fails silently — the tra
 
 ## Window wake and screenshots (beta.10)
 
+For a window that still paints but stops accepting clicks after a tray cycle, install beta.11 or later after fully quitting the old build. Windows now parks the overlay with zero opacity and mouse pass-through, restoring input on wake without unmapping the render widget. Native mouse acceptance was skipped at the user's request.
+
+MiMo retired `mimo-v2.5` and `mimo-v2.5-pro` on 2026-10-21. Beta.11 upgrades these two models on the official endpoint to `mimo-v2.6-flash` and `mimo-v2.6-pro`, preserving keys and clearing stale test results. Test again in Settings. Custom relays are untouched. Advanced connection details now include safe HTTP / transport identifiers; never send your key when reporting an error.
+
 - Fully quit the previous version from the tray before installing beta.10 or later. Browse wake avoids redundant activation-style writes and requests a repaint; region selection uses native translucency and bounded cleanup.
 - If the interface hangs but the tray works, choose **Recover interface (stop recording & generation)**. Saved sessions reload; unsaved input can be lost. Press Start to resume recording.
 - The diagnostic report and local `window-faults.json` retain sanitized window, renderer / GPU exit and screenshot timeout records. Do not clear your knowledge or settings to recover.

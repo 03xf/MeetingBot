@@ -26,6 +26,8 @@ export interface NormalizedProviderError {
   messageEn: string;
   retryable: boolean;
   providerRequestId?: string;
+  httpStatus?: number;
+  transportCode?: string;
 }
 
 /** the two halves of a user-facing message */
@@ -57,8 +59,8 @@ export const PROVIDER_TEST_MESSAGES: Record<ProviderTestCode, Bilingual> = {
     en: 'Too many requests, or the current quota limit was reached',
   },
   MODEL_NOT_FOUND: {
-    zh: '当前模型不可用或模型名已变化',
-    en: 'The selected model is unavailable or has been renamed',
+    zh: '当前模型不可用、已下线或模型名已变化',
+    en: 'The selected model is unavailable, retired or renamed',
   },
   REGION_MISMATCH: {
     zh: 'Key、地区与服务地址不匹配',
@@ -198,6 +200,7 @@ export function describeError(err: unknown): ErrorFacts {
       }
     }
   }
+  errno ||= /\b(ERR_[A-Z_0-9]+|ECONNRESET|ECONNREFUSED|ENOTFOUND|ETIMEDOUT)\b/.exec(text)?.[1] ?? '';
   return { name, errno, status, text };
 }
 
@@ -254,7 +257,7 @@ export const PROVIDER_ERROR_RULES: readonly Rule[] = [
   {
     code: 'NETWORK_UNREACHABLE',
     match: (f) =>
-      has(f, /\bECONNREFUSED\b|\bEHOSTUNREACH\b|\bENETUNREACH\b|\bENETDOWN\b|ERR_CONNECTION_REFUSED|ERR_INTERNET_DISCONNECTED/i),
+      has(f, /\bECONNREFUSED\b|\bECONNRESET\b|\bEHOSTUNREACH\b|\bENETUNREACH\b|\bENETDOWN\b|ERR_CONNECTION_(REFUSED|RESET|CLOSED|ABORTED)|ERR_NETWORK_CHANGED|ERR_INTERNET_DISCONNECTED|ERR_FAILED/i),
   },
   {
     code: 'TIMEOUT',
@@ -271,7 +274,7 @@ export const PROVIDER_ERROR_RULES: readonly Rule[] = [
   { code: 'INVALID_KEY', match: (f) => f.status === 401 },
   { code: 'INSUFFICIENT_BALANCE', match: (f) => f.status === 402 },
   { code: 'PERMISSION_DENIED', match: (f) => f.status === 403 },
-  { code: 'MODEL_NOT_FOUND', match: (f) => f.status === 404 },
+  { code: 'MODEL_NOT_FOUND', match: (f) => f.status === 404 || f.status === 410 },
   { code: 'RATE_LIMITED', match: (f) => f.status === 429 },
   { code: 'PROVIDER_ERROR', match: (f) => f.status !== undefined && f.status >= 500 },
 
@@ -311,7 +314,7 @@ export const PROVIDER_ERROR_RULES: readonly Rule[] = [
   {
     code: 'MODEL_NOT_FOUND',
     match: (f) =>
-      /model[^.]{0,20}not found|ModelNotFound|InvalidParameter[^|]*model|unknown model|model does not exist|模型不存在|不支持的模型/i.test(
+      /model[^.]{0,20}not found|ModelNotFound|model[_ -](retired|deprecated)|model (is |has been )?(retired|deprecated)|InvalidParameter[^|]*model|unknown model|model does not exist|模型不存在|模型已下线|不支持的模型/i.test(
         f.text,
       ),
   },
@@ -345,5 +348,7 @@ export function normalizeProviderError(
     messageEn: messages.en,
     retryable: isRetryable(code),
     providerRequestId: extractRequestId(facts.text),
+    httpStatus: facts.status,
+    transportCode: /^(ERR_[A-Z_0-9]{1,60}|ECONNRESET|ECONNREFUSED|ENOTFOUND|ETIMEDOUT)$/.test(facts.errno) ? facts.errno : undefined,
   };
 }

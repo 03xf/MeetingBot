@@ -4,6 +4,8 @@
  * Runs in the MAIN process only — the API key never reaches the renderer.
  */
 
+import { completionOptions } from './completionOptions';
+
 export interface LlmConfig {
   baseUrl: string; // e.g. https://api.deepseek.com/v1
   model: string;
@@ -119,7 +121,7 @@ export async function chatOnce(
       messages,
       stream: false,
       temperature: opts?.temperature ?? 0.5,
-      ...(opts?.maxTokens ? { max_tokens: opts.maxTokens } : {}),
+      ...completionOptions(config, opts?.maxTokens),
     }),
     signal: opts?.signal,
   });
@@ -156,6 +158,7 @@ export async function chatStream(
       messages,
       stream: true,
       temperature: 0.5,
+      ...completionOptions(config),
     }),
     signal,
   });

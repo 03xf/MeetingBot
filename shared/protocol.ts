@@ -104,6 +104,9 @@ export interface ProviderTestResult {
   messageEn: string;
   /** for the collapsible advanced detail, when the provider volunteered one */
   providerRequestId?: string;
+  /** Safe technical identifiers only; no response body, URL or credential. */
+  httpStatus?: number;
+  transportCode?: string;
   retryable: boolean;
 }
 

@@ -196,6 +196,8 @@ function failResult(
     messageZh: n.messageZh,
     messageEn: n.messageEn,
     providerRequestId: n.providerRequestId,
+    httpStatus: n.httpStatus,
+    transportCode: n.transportCode,
     retryable: n.retryable,
   };
 }

@@ -32,6 +32,28 @@ afterEach(() => {
 });
 
 describe('SettingsStore', () => {
+  it('upgrades only retired official MiMo text/vision models and retains encrypted keys', () => {
+    const original = defaultSettings();
+    original.llm = { ...original.llm, baseUrl: 'https://api.xiaomimimo.com/v1', model: 'mimo-v2.5-pro', apiKeyEnc: fakeCipher.encrypt('fake-mimo-key'), verification: { lastTestOk: false, lastTestCode: 'UNKNOWN_ERROR' } };
+    original.vision = { ...original.vision, baseUrl: 'https://api.xiaomimimo.com/v1/', model: 'mimo-v2.5', apiKeyEnc: fakeCipher.encrypt('fake-vision-key'), verification: { lastTestOk: true } };
+    original.asr.cloud = { baseUrl: 'https://api.xiaomimimo.com/v1', model: 'mimo-v2.5-asr' };
+    writeFileSync(file, JSON.stringify(original));
+    const store = new SettingsStore(file, fakeCipher);
+    expect(store.migratedMimoModels).toBe(true);
+    expect(store.data.llm).toMatchObject({ model: 'mimo-v2.6-pro', apiKeyEnc: original.llm.apiKeyEnc, providerId: 'mimo' });
+    expect(store.data.vision).toMatchObject({ model: 'mimo-v2.6-flash', apiKeyEnc: original.vision.apiKeyEnc });
+    expect(store.data.llm.verification).toBeUndefined(); expect(store.data.vision.verification).toBeUndefined();
+    expect(store.data.asr).toEqual(original.asr); expect(store.data.ui).toEqual(original.ui);
+    const restarted = new SettingsStore(file, fakeCipher);
+    expect(restarted.migratedMimoModels).toBe(false); expect(restarted.data.vision.model).toBe('mimo-v2.6-flash');
+  });
+  it('does not rewrite a custom relay or unaffected MiMo ASR configuration', () => {
+    const original = defaultSettings();
+    original.llm = { ...original.llm, baseUrl: 'https://relay.example.com/v1', model: 'mimo-v2.5-pro' };
+    original.vision = { baseUrl: 'https://api.xiaomimimo.com/v1/custom', model: 'mimo-v2.5' };
+    writeFileSync(file, JSON.stringify(original)); const store = new SettingsStore(file, fakeCipher);
+    expect(store.migratedMimoModels).toBe(false); expect(store.data.llm).toEqual(original.llm); expect(store.data.vision).toEqual(original.vision);
+  });
   it('boots with defaults when no file exists', () => {
     const s = new SettingsStore(file, fakeCipher);
     expect(s.data).toEqual(defaultSettings());

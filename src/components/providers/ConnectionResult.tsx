@@ -109,6 +109,12 @@ export function ConnectionResult({
                   <span className="conn-detail-v">{result.providerRequestId}</span>
                 </div>
               )}
+              {result.httpStatus !== undefined && <div>
+                <span className="conn-detail-k">HTTP</span><span className="conn-detail-v">{result.httpStatus}</span>
+              </div>}
+              {result.transportCode && <div>
+                <span className="conn-detail-k">Transport</span><span className="conn-detail-v">{result.transportCode}</span>
+              </div>}
               {time && (
                 <div>
                   <span className="conn-detail-k">{copy.detailTime}</span>

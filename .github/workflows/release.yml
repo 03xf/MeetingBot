@@ -40,6 +40,9 @@ jobs:
       - name: Verify custom instructions, transparency and mode state
         run: npm run smoke:custom-prompt
 
+      - name: Verify vision transport and cancellation
+        run: npm run smoke:vision
+
       - name: Verify window wake, screenshot lifecycle and renderer recovery
         run: npm run smoke:window
 

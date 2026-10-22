@@ -77,7 +77,7 @@ MeetingBot 采用 **BYOK（Bring Your Own Key，自带 Key）**：
 
 ### MiMo · 小米（一个 Key 兼顾转写与回答，Beta）
 
-用途：`mimo-v2.5-asr` 做分段语音识别、`mimo-v2.5-pro` 做 AI 回答、`mimo-v2.5` 做截图问答，全部走 `https://api.xiaomimimo.com/v1`。
+用途：`mimo-v2.5-asr` 做分段语音识别、`mimo-v2.6-pro` 做 AI 回答、`mimo-v2.6-flash` 做截图问答，全部走 `https://api.xiaomimimo.com/v1`。
 
 1. 打开 [MiMo 开放平台](https://platform.xiaomimimo.com/)。
 2. 使用小米账号登录；首次使用请先完成注册。
@@ -101,7 +101,7 @@ MeetingBot 采用 **BYOK（Bring Your Own Key，自带 Key）**：
 5. 中国大陆网络通常无法直连 Google，请在「视觉代理」里填写本机代理地址（例如 `127.0.0.1:7897`）。
 6. 视觉问答是可选功能，可以跳过；跳过后截图提问会提示尚未配置。
 
-> 想在国内直连，可以改用 MiMo 的视觉模型 `mimo-v2.5`，代理留空即可。
+> 想在国内直连，可以改用 MiMo 的视觉模型 `mimo-v2.6-flash`，代理留空即可。
 
 ### 自定义（OpenAI 兼容服务）
 

@@ -39,7 +39,7 @@ async function run() {
   const url = `http://127.0.0.1:${server.address().port}/v1`;
   const key = safeStorage.isEncryptionAvailable() ? safeStorage.encryptString('fake-window-qa').toString('base64') : 'plain:' + Buffer.from('fake-window-qa').toString('base64');
   fs.writeFileSync(path.join(profile, 'settings.json'), JSON.stringify({ version: 2, onboarding: { schemaVersion: 1, completed: true },
-    llm: { baseUrl: url, model: 'fake', apiKeyEnc: key }, vision: { baseUrl: url, model: 'fake', apiKeyEnc: key },
+    llm: { baseUrl: url, model: 'fake', apiKeyEnc: key }, vision: { baseUrl: 'https://api.xiaomimimo.com/v1', model: 'mimo-v2.5', apiKeyEnc: key, verification: {lastTestOk:false,lastTestCode:'UNKNOWN_ERROR'} },
     asr: { backend: 'cloud', cloud: { baseUrl: url, model: 'fake', apiKeyEnc: key } },
     ui: { lang: 'zh', theme: 'dark', stealth: true, hotkeyToggle: '', hotkeyShot: '' } }));
   fs.writeFileSync(path.join(profile, 'sessions.json'), JSON.stringify({ currentId: 'qa', sessions: [{ id: 'qa', name: 'Window QA', createdAt: 1, questionQueueVersion: 1,
@@ -61,12 +61,17 @@ async function run() {
   await until(async () => win && await js('document.querySelector(".session-picker > button")?.textContent.includes("Window QA") && !!window.__mcOpenSettings'), 'loaded session');
   const menu = label => { const item = template.find(i => i.label === label); assert(item?.click, 'Menu entry ' + label); item.click(); };
   assert.equal(await js('window.mc.getWindowMode()'), 'browse'); assert.equal(win.isFocusable(), false);
+  assert.equal(await js('window.mc.getSettings().then(s=>s.vision.model)'), 'mimo-v2.6-flash');
+  assert.equal(await js('document.body.textContent.includes("V2.6")'), true, 'model migration must be visible to the user');
   assert.equal(await js('document.querySelectorAll(".turn-error").length || document.body.textContent.includes("中断")'), true);
-  let styleWrites = 0, focusEvents = 0;
+  let styleWrites = 0, focusEvents = 0, nativeHides = 0;
+  win.on('hide', () => nativeHides++);
   const setFocusable = win.setFocusable.bind(win); win.setFocusable = value => { styleWrites++; return setFocusable(value); };
   win.on('focus', () => focusEvents++);
   for (let i = 0; i < 20; i++) {
-    menu('隐藏窗口'); await pause(10); menu('显示窗口');
+    menu('隐藏窗口'); await pause(10);
+    assert.equal(win.getOpacity(), 0); assert(win.isVisible(), 'parked render widget stays mapped');
+    menu('显示窗口'); assert.equal(win.getOpacity(), 1);
     assert.equal(await js('window.mc.getWindowMode()'), 'browse');
   }
   menu('隐藏窗口');
@@ -76,6 +81,14 @@ async function run() {
   assert.equal(await js('document.querySelector(".brand").textContent'), 'MeetingBot');
   assert.equal(styleWrites, 0, 'browse wakes must not repeat native activation-style writes');
   assert.equal(focusEvents, 0, 'programmatic browse display must not emit window focus');
+  assert.equal(nativeHides, 0, 'Windows tray hiding must not unmap the render widget');
+  // Dispatch Chromium mouse events instead of calling the button's callback.
+  // This tests renderer event delivery, not native Windows hit-testing.
+  const point = await js('(()=>{const r=document.querySelector(".session-picker > button").getBoundingClientRect();return{x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()');
+  win.webContents.sendInputEvent({ type: 'mouseDown', button: 'left', clickCount: 1, ...point });
+  win.webContents.sendInputEvent({ type: 'mouseUp', button: 'left', clickCount: 1, ...point });
+  await until(() => js('!!document.querySelector(".session-menu")'), 'mouse input after tray wake');
+  await js('document.querySelector(".session-option").click()');
   console.log('[window-lifecycle] repeated hide/show and hidden-idle IPC passed');
   await js('window.__qaShot="pending"; void window.mc.pickRegion().then(x => window.__qaShot = x === null ? "cancelled" : "selected");');
   let region;
@@ -105,6 +118,6 @@ async function run() {
   const faults = fs.readFileSync(path.join(profile, 'window-faults.json'), 'utf8');
   assert(faults.includes('unresponsive')); assert(!faults.includes('fake-window-qa')); assert(!faults.includes('synthetic pending question'));
   console.log('[window-lifecycle] recovery, generation abort, capture reset, saved session and sanitized fault log passed');
-  fs.writeFileSync(path.join(qa, 'result.json'), JSON.stringify({ passed: true, idleMs, styleWrites, focusEvents, nativeBrowserAcceptance: 'not tested' }, null, 2));
+  fs.writeFileSync(path.join(qa, 'result.json'), JSON.stringify({ passed: true, idleMs, styleWrites, focusEvents, nativeHides, chromiumMouseInput: true, nativeBrowserAcceptance: 'not tested' }, null, 2));
   clearTimeout(timer); server.closeAllConnections(); await new Promise(r => server.close(r)); app.quit();
 }

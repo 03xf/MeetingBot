@@ -77,7 +77,7 @@ Common problems:
 
 ### MiMo · Xiaomi (one key for both ASR and answers, Beta)
 
-Used for: `mimo-v2.5-asr` per-segment ASR, `mimo-v2.5-pro` answers and `mimo-v2.5` screenshot Q&A, all on `https://api.xiaomimimo.com/v1`.
+Used for: `mimo-v2.5-asr` per-segment ASR, `mimo-v2.6-pro` answers and `mimo-v2.6-flash` screenshot Q&A, all on `https://api.xiaomimimo.com/v1`.
 
 1. Open the [MiMo open platform](https://platform.xiaomimimo.com/).
 2. Sign in with your Xiaomi account; register first if you have none.
@@ -101,7 +101,7 @@ Used for: the vision model, `https://generativelanguage.googleapis.com/v1beta/op
 5. Google is usually unreachable directly from mainland China — set a local proxy in "Vision proxy" (e.g. `127.0.0.1:7897`).
 6. Visual Q&A is optional and can be skipped; the screenshot button then reports it is not configured.
 
-> For a direct connection inside mainland China, use MiMo's vision model `mimo-v2.5` instead and leave the proxy empty.
+> For a direct connection inside mainland China, use MiMo's vision model `mimo-v2.6-flash` instead and leave the proxy empty.
 
 ### Custom (OpenAI-compatible services)
 

@@ -23,7 +23,7 @@ import {
   whisperExecutionProvidersForPlatform,
 } from '../shared/platform';
 import { AsrHost } from './asrHost';
-import { displayWindow, prepareRegionWindow } from './windowInteraction';
+import { TrayWindowVisibility, prepareRegionWindow } from './windowInteraction';
 import { RegionCapture } from './regionCapture';
 import { WindowFaults } from './windowFaults';
 import type { WindowInteractionMode } from '../shared/protocol';
@@ -118,6 +118,7 @@ if (!app.requestSingleInstanceLock()) {
 
 function bootstrap(): void {
   let win: BrowserWindow | null = null;
+  let windowVisibility: TrayWindowVisibility | null = null;
   /** first-run wizard window; mutually exclusive with `win` until completion */
   let setupWin: BrowserWindow | null = null;
   /** the wizard was reopened from a running main window (设置 → 重新运行配置
@@ -150,7 +151,7 @@ function bootstrap(): void {
     const changed = windowMode !== mode;
     windowMode = mode;
     if (win && win.isFocusable() !== (mode === 'edit')) win.setFocusable(mode === 'edit');
-    if (mode === 'edit' && win) displayWindow(win, mode);
+    if (mode === 'edit') windowVisibility?.show(mode);
     if (changed) win?.webContents.send(IPC.windowModeChanged, mode);
     return mode;
   }
@@ -250,7 +251,7 @@ function bootstrap(): void {
   function showWindow(): void {
     if (!win) return;
     if (process.platform === 'win32' && windowMode !== 'browse') setWindowMode('browse');
-    displayWindow(win, windowMode);
+    windowVisibility?.show(windowMode);
     // A hidden transparent surface may have discarded its last compositor
     // frame. Request a repaint without activating or focusing the window.
     if (!win.webContents.isDestroyed()) win.webContents.invalidate();
@@ -258,15 +259,15 @@ function bootstrap(): void {
 
   function toggleWindow(): void {
     if (!win) return;
-    if (win.isVisible()) {
+    if (windowVisibility?.visible) {
       if (process.platform === 'win32') setWindowMode('browse');
-      win.hide();
+      windowVisibility.hide();
     }
     else showWindow();
   }
 
   function trayState(): TrayMenuState {
-    return { windowVisible: !!win?.isVisible(), capturing };
+    return { windowVisible: !!windowVisibility?.visible, capturing };
   }
 
   /** rebuild the tray menu — call after anything the menu shows has changed */
@@ -384,12 +385,20 @@ function bootstrap(): void {
       skipTaskbar: true,
       hasShadow: false,
       resizable: true,
+      // The titlebar dash parks the Windows overlay instead of entering the
+      // native minimize/hide transition that can break non-focusable input.
+      minimizable: process.platform !== 'win32',
       webPreferences: {
         preload: join(__dirname, '../preload/index.js'),
         contextIsolation: true,
         nodeIntegration: false,
         backgroundThrottling: false,
       },
+    });
+    windowVisibility = new TrayWindowVisibility(win, process.platform, (visible) => {
+      console.log(`[window] ${visible ? 'shown' : 'hidden'}`);
+      refreshTray();
+      if (!visible) noticeWindowHidden();
     });
     win.once('ready-to-show', () => showWindow());
     win.setAlwaysOnTop(true, 'screen-saver');
@@ -465,20 +474,11 @@ function bootstrap(): void {
     // whichever of the four hide paths was used (hotkey, 「—」, tray, IPC)
     // "where did my window go" is THE support question for a frameless,
     // taskbar-less, content-protected overlay, so both transitions are logged
-    win.on('show', () => {
-      console.log('[window] shown');
-      refreshTray();
-    });
-    win.on('hide', () => {
-      console.log('[window] hidden');
-      refreshTray();
-      noticeWindowHidden();
-    });
-
     win.on('closed', () => {
+      windowVisibility = null;
       win = null;
     });
-    win.on('unresponsive', () => windowFaults?.record('unresponsive', `renderer unresponsive; visible=${!!win?.isVisible()}; mode=${windowMode}`));
+    win.on('unresponsive', () => windowFaults?.record('unresponsive', `renderer unresponsive; visible=${!!windowVisibility?.visible}; mode=${windowMode}`));
     win.webContents.on('render-process-gone', (_e, details) => {
       windowFaults?.record('renderer-exit', `reason=${details.reason}; exitCode=${details.exitCode}; requestedRecovery=${recoveringView}`);
       cancelRegion();
@@ -568,6 +568,9 @@ function bootstrap(): void {
     // users who never chose a UI language get their OS language (zh → zh, else en)
     osLang = app.getLocale().toLowerCase().startsWith('zh') ? 'zh' : 'en';
     settings = new SettingsStore(join(app.getPath('userData'), 'settings.json'), cipher(), osLang);
+    if (settings.migratedMimoModels) recoveryNotice = settings.data.ui.lang === 'en'
+      ? 'Retired MiMo models were upgraded to V2.6. Your key is retained; please test the connection again in Settings. Pricing follows the new model.'
+      : 'MiMo 已下线的模型已更新为 V2.6，原 Key 保留。请在设置中重新测试连接；费用按新模型计费。';
     windowFaults = new WindowFaults(join(app.getPath('userData'), 'window-faults.json'));
     knowledge = new KnowledgeStore(
       join(app.getPath('userData'), 'knowledge.json'),
@@ -803,7 +806,7 @@ function bootstrap(): void {
         if (!result.ok) {
           recordDiagnosticError(
             `provider-test/${request.capability}`,
-            `${result.code} (${request.providerId} ${request.model})`,
+            `${result.code} (${request.providerId} ${request.model}); HTTP=${result.httpStatus ?? '-'}; transport=${result.transportCode ?? '-'}`,
           );
         }
         console.log(
@@ -968,7 +971,7 @@ function bootstrap(): void {
     });
     ipcMain.on(IPC.winHide, () => {
       if (process.platform === 'win32') setWindowMode('browse');
-      win?.hide();
+      windowVisibility?.hide();
     });
     ipcMain.on(IPC.appQuit, () => app.quit());
 

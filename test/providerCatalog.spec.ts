@@ -116,6 +116,8 @@ describe('providerCatalog', () => {
       model: 'mimo-v2.5-asr',
       beta: true,
     });
+    expect(findPresetById('mimo.text.fast')?.model).toBe('mimo-v2.6-pro');
+    expect(findPresetById('mimo.vision')?.model).toBe('mimo-v2.6-flash');
     expect(findPresetById('gemini.vision.flash')).toMatchObject({
       baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
       model: 'gemini-2.5-flash',
