@@ -86,15 +86,27 @@ export function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [windowNotice, setWindowNotice] = useState<string | null>(null);
   const [windowMode, setWindowMode] = useState<WindowInteractionMode>(window.mc.platform === 'win32' ? 'browse' : 'edit');
+  const modeEpochRef = useRef(0);
   const requestEdit = useCallback(async () => {
-    const mode = await window.mc.setWindowMode('edit');
+    const epoch = modeEpochRef.current;
+    const mode = await window.mc.getWindowMode();
+    if (mode === 'browse' || epoch !== modeEpochRef.current) {
+      setWindowNotice(tRef.current.titlebar.editLocked);
+      return false;
+    }
+    return true;
+  }, []);
+  const finishEdit = useCallback(async () => {
+    if (window.mc.platform !== 'win32') return;
+    const mode = await window.mc.setWindowMode('browse');
     setWindowMode(mode);
   }, []);
   useEffect(() => {
-    const off = window.mc.onWindowModeChanged(setWindowMode);
+    const off = window.mc.onWindowModeChanged((mode) => { modeEpochRef.current++; setWindowMode(mode); });
+    const offBlocked = window.mc.onInteractionBlocked(() => setWindowNotice(tRef.current.titlebar.editLocked));
     void window.mc.getWindowMode().then(setWindowMode);
     void window.mc.getRecoveryNotice().then(setWindowNotice);
-    return off;
+    return () => { off(); offBlocked(); };
   }, []);
   const [opacityPreview, setOpacityPreview] = useState<number | null>(null);
   const [showHealth, setShowHealth] = useState(false);
@@ -420,7 +432,7 @@ export function App() {
     window.__mcAutoStart = () => void startCapture();
     // visual-QA hooks (MC_MAIN_SHOT in electron/main.ts): open a panel from the
     // main process so it can be screenshotted
-    window.__mcOpenSettings = () => { void requestEdit().then(() => setShowSettings(true)); };
+    window.__mcOpenSettings = () => { void requestEdit().then((allowed) => { if (allowed) setShowSettings(true); }); };
     window.__mcOpenHelp = () => setShowHelp(true);
     return () => {
       off();
@@ -692,8 +704,7 @@ export function App() {
           createSession();
           return;
         case 'open-settings':
-          closePanels();
-          setShowSettings(true);
+          void requestEdit().then((allowed) => { if (allowed) { closePanels(); setShowSettings(true); } });
           return;
         case 'open-health':
           closePanels();
@@ -709,7 +720,7 @@ export function App() {
 
   const pickKb = useCallback(
     async (slot: KbSlot) => {
-      await requestEdit();
+      if (!await requestEdit()) return;
       const r = await window.mc.pickKnowledge(slot);
       if (!r) return;
       if (!r.text.trim()) {
@@ -908,8 +919,8 @@ export function App() {
             })}
           >{windowMode === 'browse' ? t.titlebar.browseMode : t.titlebar.editMode}</button>}
           <button className="btn" onClick={() => {
-            if (showSettings) setShowSettings(false);
-            else void requestEdit().then(() => setShowSettings(true));
+            if (showSettings) { setShowSettings(false); void finishEdit(); }
+            else void requestEdit().then((allowed) => { if (allowed) setShowSettings(true); });
           }} title={t.titlebar.settingsTitle}>
             ⚙
           </button>
@@ -948,7 +959,7 @@ export function App() {
           onClose={() => setShowHealth(false)}
           onOpenSettings={() => {
             setShowHealth(false);
-            void requestEdit().then(() => setShowSettings(true));
+            void requestEdit().then((allowed) => { if (allowed) setShowSettings(true); });
           }}
           onOpenDiagnostics={() => {
             setShowHealth(false);
@@ -967,7 +978,7 @@ export function App() {
           onClose={() => setShowHelp(false)}
           onOpenSettings={() => {
             setShowHelp(false);
-            void requestEdit().then(() => setShowSettings(true));
+            void requestEdit().then((allowed) => { if (allowed) setShowSettings(true); });
           }}
           onOpenDiagnostics={() => {
             setShowHelp(false);
@@ -984,18 +995,21 @@ export function App() {
             setSettings(s);
             answerLangRef.current = s.llm.answerLang;
             setShowSettings(false);
+            void finishEdit();
           }}
-          onClose={() => setShowSettings(false)}
+          onClose={() => { setShowSettings(false); void finishEdit(); }}
           onRerunWizard={() => {
             setShowSettings(false);
             void window.mc.rerunOnboarding();
           }}
           onOpenDiagnostics={() => {
             setShowSettings(false);
+            void finishEdit();
             setShowDiagnostics(true);
           }}
           onOpenHelp={() => {
             setShowSettings(false);
+            void finishEdit();
             setShowHelp(true);
           }}
         />
@@ -1023,6 +1037,7 @@ export function App() {
           turns={current?.turns ?? []}
           editable={windowMode === 'edit'}
           onRequestEdit={requestEdit}
+          onFinishEdit={finishEdit}
           onOpenKnowledge={() => {
             closePanels();
             setShowKnowledge(true);

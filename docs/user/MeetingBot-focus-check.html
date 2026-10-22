@@ -4,46 +4,47 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MeetingBot 焦点自检</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#edf2f8;color:#183047;font:16px/1.7 system-ui,"Microsoft YaHei",sans-serif}main{max-width:1020px;margin:32px auto;padding:28px;background:white;border-radius:16px}h1{font-size:27px;margin:0 0 8px}h2{font-size:18px}p{margin:8px 0}.muted{color:#596b7b}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:20px 0}.card{background:#f2f5f9;border:1px solid #dce4ed;border-radius:10px;padding:16px}.value{display:block;font-size:29px;font-weight:700}button{background:#225fca;color:white;border:0;padding:12px 22px;border-radius:8px;font:inherit;cursor:pointer}#summary{padding:16px;border-radius:8px;background:#e7effe;margin:16px 0}.bad{background:#ffe6e4!important;color:#8d211c}.good{background:#e5f5eb!important;color:#185e36}ol{padding-left:24px}table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:8px;border-bottom:1px solid #e4eaf0}#logs{max-height:330px;overflow:auto}.state{font-weight:700}code{background:#edf1f5;padding:2px 5px;border-radius:4px}@media(max-width:650px){main{margin:8px;padding:16px}.cards{grid-template-columns:1fr}}
+*{box-sizing:border-box}body{margin:0;background:#edf2f8;color:#183047;font:16px/1.7 system-ui,"Microsoft YaHei",sans-serif}main{max-width:1020px;margin:32px auto;padding:28px;background:white;border-radius:16px}h1{font-size:27px;margin:0 0 8px}h2{font-size:18px}p{margin:8px 0}.muted{color:#596b7b}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:20px 0}.card{background:#f2f5f9;border:1px solid #dce4ed;border-radius:10px;padding:16px}.value{display:block;font-size:29px;font-weight:700}button{background:#225fca;color:white;border:0;padding:12px 22px;border-radius:8px;font:inherit;cursor:pointer}#summary{padding:16px;border-radius:8px;background:#e7effe;margin:16px 0}.bad{background:#ffe6e4!important;color:#8d211c}.good{background:#e5f5eb!important;color:#185e36}ol{padding-left:24px}table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:8px;border-bottom:1px solid #e4eaf0}#logs{max-height:330px;overflow:auto}.state{font-weight:700}code{background:#edf1f5;padding:2px 5px;border-radius:4px}@media(max-width:650px){main{margin:8px;padding:16px}.cards{grid-template-columns:1fr}}
 </style>
 <main>
 <h1>MeetingBot 焦点自检</h1>
 <p class="muted">离线运行，不发送数据、不使用摄像头或麦克风。不修改其他网站，也不验证面试平台的其他检测规则。</p>
 <ol>
 <li>在独立的 Edge 或 Chrome 窗口打开本文件，把它放在前台。先准备好 MeetingBot 的测试版本。</li>
-<li>点击下方“开始 / 重置”，等待一秒，然后依次测试：<code>Ctrl+B</code> 显示、点击回答、滚动内容、截图框选与取消。</li>
+<li>先做正向校准：开始记录后主动切换窗口、切换标签页，确认能分别记录失焦和隐藏；全屏测试还须主动退出一次确认事件有效。校准无效不能算通过。重新开始记录，等待一秒，然后依次测试：<code>Ctrl+B</code> 显示、点击回答、滚动内容、截图框选与取消。</li>
 <li>测试时不要点回本页，也不要切换其他窗口。观察计数；每项操作可以重置后单独再测。</li>
-<li>主动进入 MeetingBot 编辑模式、输入或选文件属于允许切换焦点的场景，单独测试，不算浏览模式通过。</li>
+<li>使用 beta.12 的“浏览·锁定”模式。误点设置、导入等只应显示提示；通过标题栏主动进入编辑会切走焦点，单独测试。完成编辑后先自行返回本页，再重置记录。</li>
 </ol>
-<button id="start">开始 / 重置</button>
+<button id="start">开始 / 重置</button> <button id="fullscreen">进入 / 退出全屏</button>
 <div id="summary" role="status" aria-live="polite">尚未开始。点击后等待一秒，再操作 MeetingBot。</div>
 <div class="cards">
 <div class="card">窗口失焦事件<span class="value" id="blur">0</span><span class="muted">blur 事件次数</span></div>
 <div class="card">页面变为隐藏<span class="value" id="hidden">0</span><span class="muted">visibilityState 变为 hidden</span></div>
 <div class="card">检测到未持有焦点<span class="value" id="poll">0</span><span class="muted">hasFocus 从 true 变为 false</span></div>
+<div class="card">退出全屏<span class="value" id="fullscreenExit">0</span><span class="muted">需先进入全屏测试</span></div>
 </div>
 <p>当前页面焦点：<span class="state" id="focusState">—</span>；可见性：<span class="state" id="visibility">—</span></p>
-<p class="muted">计数不会因你点回页面而清零。三个计数都为 0，仅表示本轮没有观察到这些事件；须重复验证，不能证明所有面试网站均兼容。请使用 beta.11 或更新测试版；早期版本可能仍有截图遮挡和唤醒问题。真实平台兼容性仍需分别验证。</p>
+<p class="muted">计数不会因你点回页面而清零。四个计数都为 0，仅表示本轮没有观察到这些事件；须重复验证，不能证明所有面试网站均兼容。请使用 beta.12 或更新测试版；早期版本可能仍有截图遮挡和唤醒问题。真实平台兼容性仍需分别验证。</p>
 <h2>本轮事件记录</h2>
-<div id="logs"><table><thead><tr><th>时间</th><th>事件</th><th>持有焦点</th><th>可见性</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div id="logs"><table><thead><tr><th>时间</th><th>事件</th><th>持有焦点</th><th>可见性</th><th>全屏</th></tr></thead><tbody id="rows"></tbody></table></div>
 </main>
 <script>
 (()=>{
   const $=id=>document.getElementById(id);
-  let armed=false,timer,counts={blur:0,hidden:0,poll:0},previousFocus=document.hasFocus();
+  let armed=false,timer,fullscreenError=false,counts={blur:0,hidden:0,poll:0,fullscreenExit:0},previousFocus=document.hasFocus(),wasFullscreen=!!document.fullscreenElement;
   function update(){
     $('focusState').textContent=document.hasFocus()?'是':'否';
     $('visibility').textContent=document.visibilityState;
     for(const k of Object.keys(counts))$(k).textContent=counts[k];
     if(!armed)return;
-    const bad=Object.values(counts).some(n=>n>0);
+    const bad=fullscreenError||Object.values(counts).some(n=>n>0);
     $('summary').className=bad?'bad':'good';
-    $('summary').textContent=bad?'本轮观察到失焦或隐藏。请用事件时间对照刚才的操作；返回页面后记录仍保留。':'正在记录，目前未观察到失焦或隐藏。请继续测试各项操作。';
+    $('summary').textContent=fullscreenError?'全屏操作失败，本轮全屏项不能算通过。':bad?'本轮观察到失焦、隐藏或退出全屏。请用事件时间对照刚才的操作；返回页面后记录仍保留。':'正在记录，目前未观察到失焦、隐藏或退出全屏。请继续测试各项操作。';
   }
   function record(kind){
     if(!armed)return;
     const row=document.createElement('tr');
-    for(const value of [new Date().toLocaleTimeString('zh-CN',{hour12:false})+'.'+String(new Date().getMilliseconds()).padStart(3,'0'),kind,document.hasFocus()?'是':'否',document.visibilityState]){
+    for(const value of [new Date().toLocaleTimeString('zh-CN',{hour12:false})+'.'+String(new Date().getMilliseconds()).padStart(3,'0'),kind,document.hasFocus()?'是':'否',document.visibilityState,document.fullscreenElement?'是':'否']){
       const cell=document.createElement('td');cell.textContent=value;row.appendChild(cell);
     }
     $('rows').prepend(row);while($('rows').children.length>150)$('rows').lastElementChild.remove();
@@ -51,9 +52,11 @@
   addEventListener('blur',()=>{if(armed){counts.blur++;record('window.blur')}update()});
   addEventListener('focus',()=>{record('window.focus');update()});
   document.addEventListener('visibilitychange',()=>{if(armed&&document.visibilityState==='hidden')counts.hidden++;record('visibilitychange');update()});
+  document.addEventListener('fullscreenchange',()=>{const full=!!document.fullscreenElement;if(armed&&wasFullscreen&&!full)counts.fullscreenExit++;wasFullscreen=full;record('fullscreenchange');update()});
+  $('fullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();fullscreenError=false}catch{fullscreenError=true}update()};
   setInterval(()=>{const focused=document.hasFocus();if(armed&&previousFocus&&!focused){counts.poll++;record('hasFocus → false')}previousFocus=focused;update()},50);
   $('start').onclick=()=>{
-    armed=false;clearTimeout(timer);counts={blur:0,hidden:0,poll:0};$('rows').replaceChildren();
+    armed=false;fullscreenError=false;clearTimeout(timer);counts={blur:0,hidden:0,poll:0,fullscreenExit:0};$('rows').replaceChildren();
     $('summary').className='';$('summary').textContent='准备中：一秒后开始记录，请让本页保持前台。';update();
     timer=setTimeout(()=>{
       if(!document.hasFocus()||document.visibilityState!=='visible'){$('summary').textContent='开始失败：请先点击本页，再重新开始。';return}

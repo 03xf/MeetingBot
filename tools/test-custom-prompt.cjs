@@ -96,6 +96,8 @@ async function run() {
     assert.equal(win.isFocusable(), false, 'opening the menu must not enable focus');
     await js('document.querySelector(".session-option").click()');
     await until(() => js('!document.querySelector(".session-menu")'), 'session selection');
+    await js('document.querySelector(".interaction-mode").click()');
+    await until(() => js('window.mc.getWindowMode().then(m=>m==="edit")'), 'explicit edit switch');
     await js('window.__mcOpenSettings()');
     await until(() => js('!!document.querySelector("#custom-answer-prompt")'), 'explicit settings editing');
     assert.equal(await js('window.mc.getWindowMode()'), 'edit');
@@ -107,6 +109,9 @@ async function run() {
   }
 
   async function open() {
+    if (process.platform === 'win32') {
+      await js('window.mc.setWindowMode("edit")');
+    }
     await js('window.__mcOpenSettings()');
     await until(() => js('!!document.querySelector("#custom-answer-prompt")'), 'prompt editor');
   }
@@ -116,6 +121,7 @@ async function run() {
     await pause(50);
     await js(`document.querySelector('.settings-actions .btn-primary').click()`);
     await until(() => js('!document.querySelector("#custom-answer-prompt")'), 'saved');
+    if (process.platform === 'win32') assert.equal(await js('window.mc.getWindowMode()'), 'browse', 'saving settings restores browse');
     assert.equal(await js('window.mc.getSettings().then(s=>s.llm.customPrompt)'), value);
   }
   async function slider(transparency) {
@@ -126,6 +132,7 @@ async function run() {
   async function savePanel() {
     await js(`document.querySelector('.settings-actions .btn-primary').click()`);
     await until(() => js('!document.querySelector("#background-transparency")'), 'panel saved');
+    if (process.platform === 'win32') assert.equal(await js('window.mc.getWindowMode()'), 'browse', 'saving appearance restores browse');
   }
   async function checkAppearance(alpha) {
     await until(() => js(`Math.abs(Number(getComputedStyle(document.documentElement).getPropertyValue('--background-opacity'))-${alpha})<0.001`), 'saved alpha');

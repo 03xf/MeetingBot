@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { KnowledgeSummary, KnowledgeContext } from '../../shared/protocol';
 import { useT } from '../i18n';
 
-export function KnowledgePanel({ onClose, editable, onRequestEdit }: { onClose: () => void; editable: boolean; onRequestEdit: () => Promise<void> }) {
+export function KnowledgePanel({ onClose, editable, onRequestEdit }: { onClose: () => void; editable: boolean; onRequestEdit: () => Promise<boolean> }) {
   const t = useT().knowledge;
   const [library, setLibrary] = useState<KnowledgeSummary | null>(null);
   const [busy, setBusy] = useState(false);

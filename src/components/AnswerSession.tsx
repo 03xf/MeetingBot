@@ -40,6 +40,7 @@ export function AnswerSession({
   onOpenKnowledge,
   editable,
   onRequestEdit,
+  onFinishEdit,
 }: {
   sessions: StoredSession[];
   currentId: string;
@@ -66,7 +67,8 @@ export function AnswerSession({
   onShotAsk: (question: string, imageDataUrl?: string) => void;
   onOpenKnowledge: () => void;
   editable: boolean;
-  onRequestEdit: () => Promise<void>;
+  onRequestEdit: () => Promise<boolean>;
+  onFinishEdit: () => Promise<void>;
 }) {
   const t = useT();
   const boxRef = useRef<HTMLDivElement>(null);
@@ -114,13 +116,16 @@ export function AnswerSession({
             onBlur={() => {
               onRename(currentId, nameDraft);
               setEditing(false);
+              void onFinishEdit();
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 onRename(currentId, nameDraft);
                 setEditing(false);
+                void onFinishEdit();
               } else if (e.key === 'Escape') {
                 setEditing(false);
+                void onFinishEdit();
               }
             }}
           />
@@ -137,7 +142,7 @@ export function AnswerSession({
         <button
           className="btn btn-sm"
           onClick={async () => {
-            await onRequestEdit();
+            if (!await onRequestEdit()) return;
             setNameDraft(currentName);
             setEditing(true);
           }}

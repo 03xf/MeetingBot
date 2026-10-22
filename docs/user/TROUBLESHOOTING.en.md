@@ -108,3 +108,7 @@ MiMo retired `mimo-v2.5` and `mimo-v2.5-pro` on 2026-10-21. Beta.11 upgrades the
 - If the interface hangs but the tray works, choose **Recover interface (stop recording & generation)**. Saved sessions reload; unsaved input can be lost. Press Start to resume recording.
 - The diagnostic report and local `window-faults.json` retain sanitized window, renderer / GPU exit and screenshot timeout records. Do not clear your knowledge or settings to recover.
 - Page hidden, window blur and fullscreen exit are separate signals. The original long-idle hang is not reproduced, and native browser / assessment-platform acceptance remains pending.
+
+## Settings / import only show a notice (beta.12)
+
+This is expected in locked Browse mode. Switch to Edit explicitly using the titlebar; editing takes focus away from the assessment page. Finishing settings, imports, rename or setup restores Browse without activating another app. Return to the assessment page yourself. Complete permissions and audio configuration beforehand; recording errors stay inline. Browse locking and capture protection do not guarantee invisibility to every platform. See [validation limits](../releases/v0.2.0-beta.12.md).

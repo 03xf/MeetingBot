@@ -14,7 +14,7 @@ if (!process.versions.electron) {
 void run().catch(e => { console.error(e); require('electron').app.exit(1); });
 
 async function run() {
-  const { app, safeStorage, Menu, BrowserWindow, desktopCapturer, nativeImage, screen } = require('electron');
+  const { app, safeStorage, Menu, BrowserWindow, desktopCapturer, nativeImage, screen, dialog, shell, globalShortcut, clipboard } = require('electron');
   const { createServer } = require('node:http');
   const qa = path.resolve(root, '..', 'window-qa'); fs.mkdirSync(qa, { recursive: true });
   const profile = fs.mkdtempSync(path.join(qa, 'profile-'));
@@ -25,6 +25,14 @@ async function run() {
     throw Error('Timed out: ' + label);
   }
   let win, template, requests = 0, aborted = 0, encodes = 0;
+  let copied;
+  clipboard.writeText = text => { copied = text; }; // never replace the user's clipboard
+  const shortcuts = new Map();
+  globalShortcut.register = (key, callback) => { shortcuts.set(key, callback); return true; };
+  let fileDialogs = 0, shellCalls = 0, selection = [];
+  dialog.showOpenDialog = async () => { fileDialogs++; return { canceled: !selection.length, filePaths: selection }; };
+  shell.openExternal = async () => { shellCalls++; };
+  shell.openPath = async () => { shellCalls++; return ''; };
   const originalMenu = Menu.buildFromTemplate;
   Menu.buildFromTemplate = function(items) { template = items; return originalMenu.call(this, items); };
   const timer = setTimeout(() => app.exit(1), 165_000);
@@ -41,7 +49,7 @@ async function run() {
   fs.writeFileSync(path.join(profile, 'settings.json'), JSON.stringify({ version: 2, onboarding: { schemaVersion: 1, completed: true },
     llm: { baseUrl: url, model: 'fake', apiKeyEnc: key }, vision: { baseUrl: 'https://api.xiaomimimo.com/v1', model: 'mimo-v2.5', apiKeyEnc: key, verification: {lastTestOk:false,lastTestCode:'UNKNOWN_ERROR'} },
     asr: { backend: 'cloud', cloud: { baseUrl: url, model: 'fake', apiKeyEnc: key } },
-    ui: { lang: 'zh', theme: 'dark', stealth: true, hotkeyToggle: '', hotkeyShot: '' } }));
+    ui: { lang: 'zh', theme: 'dark', stealth: true, hotkeyToggle: '', hotkeyShot: 'Control+Alt+F10' } }));
   fs.writeFileSync(path.join(profile, 'sessions.json'), JSON.stringify({ currentId: 'qa', sessions: [{ id: 'qa', name: 'Window QA', createdAt: 1, questionQueueVersion: 1,
     segments: [], pendingQuestion: [{ id: 'heard-1', segmentId: 1, text: 'synthetic pending question' }], turns: [
       { id: 'previous', kind: 'vision', label: 'synthetic screenshot', text: '', status: 'streaming' },
@@ -54,7 +62,7 @@ async function run() {
   require('../out/main/index.js');
   const js = code => {
     let timeout;
-    return Promise.race([win.webContents.executeJavaScript(code, true),
+    return Promise.race([win.webContents.executeJavaScript(code, true).catch(error=>{console.error('[fixture-script]',code);throw error}),
       new Promise((_, reject) => { timeout = setTimeout(() => reject(Error('Renderer IPC timeout')), 4000); })])
       .finally(() => clearTimeout(timeout));
   };
@@ -68,6 +76,23 @@ async function run() {
   win.on('hide', () => nativeHides++);
   const setFocusable = win.setFocusable.bind(win); win.setFocusable = value => { styleWrites++; return setFocusable(value); };
   win.on('focus', () => focusEvents++);
+  await js('window.__blocked=[];window.mc.onInteractionBlocked(e=>window.__blocked.push(e.action));window.__mcOpenSettings();document.querySelector("button[title=重命名当前会话]").click();document.querySelector(".answer-input button").click();');
+  await until(() => js('document.body.textContent.includes("请手动切换到编辑模式")'), 'locked hint');
+  assert.equal(await js('!!document.querySelector("#custom-answer-prompt") || !!document.querySelector("input.session-select")'), false);
+  assert.equal(await js('window.mc.rerunOnboarding()'), false);
+  assert.equal(await js('window.mc.openExternal("https://github.com/03xf/MeetingBot/releases")'), false);
+  assert.equal(await js('window.mc.openLogsFolder()'), false);
+  assert.equal(await js('window.mc.pickKnowledge("resume")'), null);
+  assert.equal((await js('window.mc.importKnowledge()')).documents.length, 0);
+  menu('设置'); menu('检查更新');
+  assert.equal(fileDialogs, 0); assert.equal(shellCalls, 0);
+  assert.equal(BrowserWindow.getAllWindows().length, 1);
+  assert.equal(await js('window.mc.getWindowMode()'), 'browse'); assert.equal(win.isFocusable(), false);
+  await until(()=>js('["setup","external","data-folder","import","settings"].every(a=>window.__blocked.includes(a))'),'blocked action notifications');
+  assert.equal(focusEvents,0); assert.equal(styleWrites,0);
+  await pause(100); // let the compositor paint the notice before the preview
+  fs.writeFileSync(path.join(qa,'browse-lock.png'),(await win.webContents.capturePage()).toPNG());
+  console.log('[window-lifecycle] UI, direct IPC, tray and external actions respect browse lock');
   for (let i = 0; i < 20; i++) {
     menu('隐藏窗口'); await pause(10);
     assert.equal(win.getOpacity(), 0); assert(win.isVisible(), 'parked render widget stays mapped');
@@ -90,6 +115,14 @@ async function run() {
   await until(() => js('!!document.querySelector(".session-menu")'), 'mouse input after tray wake');
   await js('document.querySelector(".session-option").click()');
   console.log('[window-lifecycle] repeated hide/show and hidden-idle IPC passed');
+  await js('document.querySelector(".titlebar-actions button:nth-child(2)").click()');
+  await until(()=>requests>0,'manual confirmation reaches local model');
+  await until(()=>js('Array.from(document.querySelectorAll(".turn-head button")).some(b=>b.textContent==="停")'),'stop generation available');
+  await js('Array.from(document.querySelectorAll(".turn-head button")).find(b=>b.textContent==="停").click()');
+  await until(()=>aborted>0,'manual stop aborts generation');
+  await js('document.querySelector(".turn-head button").click();document.querySelector(".session").scrollTop=0');
+  await until(()=>copied!==undefined,'copy through main clipboard interface');
+  assert.equal(focusEvents,0);assert.equal(win.isFocusable(),false);
   await js('window.__qaShot="pending"; void window.mc.pickRegion().then(x => window.__qaShot = x === null ? "cancelled" : "selected");');
   let region;
   await until(async () => { region = BrowserWindow.getAllWindows().find(w => w.getTitle() === 'MeetingBot Region'); return region && !region.webContents.isLoading() && await region.webContents.executeJavaScript('!!document.querySelector("#cancel")'); }, 'region overlay');
@@ -99,9 +132,35 @@ async function run() {
   await region.webContents.executeJavaScript('window.mc.regionCancel()');
   await until(() => js('window.__qaShot === "cancelled"'), 'region cancelled');
   assert(region.isDestroyed()); assert.equal(focusEvents, 0);
+  async function selectionCase(action) {
+    await js('window.__qaShot="pending";void window.mc.pickRegion().then(x=>window.__qaShot=x?"selected":"cancelled")');
+    let overlay;
+    await until(async()=>{overlay=BrowserWindow.getAllWindows().find(w=>w.getTitle()==='MeetingBot Region');return overlay&&!overlay.webContents.isLoading()&&await overlay.webContents.executeJavaScript('!!document.querySelector("#cancel")')},'selection case');
+    await action(overlay);
+    await until(()=>js('window.__qaShot!=="pending"'),'selection settled');
+    assert(overlay.isDestroyed()); assert.equal(focusEvents,0);
+  }
+  await selectionCase(ov=>ov.webContents.executeJavaScript('document.querySelector("#cancel").click()'));
+  await selectionCase(ov=>ov.webContents.executeJavaScript('dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true}))'));
+  await selectionCase(()=>js('window.mc.pickRegion()'));
+  await selectionCase(()=>shortcuts.get('Control+Alt+F10')());
+  await selectionCase(ov=>ov.webContents.executeJavaScript('window.mc.regionRect({x:1,y:1,width:1,height:1})'));
+  await selectionCase(ov=>ov.webContents.executeJavaScript('window.mc.regionRect({x:20,y:20,width:80,height:60})'));
+  assert.equal(await js('window.__qaShot'), 'selected');
+  await selectionCase(ov=>ov.webContents.forcefullyCrashRenderer());
+  const capture = desktopCapturer.getSources;
+  desktopCapturer.getSources = async()=>{throw Error('synthetic capture failure')};
+  assert.equal(await js('window.mc.pickRegion()'),null);desktopCapturer.getSources=capture;
+  await js('window.__displayMedia=navigator.mediaDevices.getDisplayMedia;navigator.mediaDevices.getDisplayMedia=async()=>{throw new DOMException("synthetic denial","NotAllowedError")};document.querySelector(".titlebar-actions button").click()');
+  await pause(100);
+  await js('navigator.mediaDevices.getDisplayMedia=window.__displayMedia;void 0');
+  assert.equal(await js('window.mc.getWindowMode()'),'browse');assert.equal(focusEvents,0);
+  assert.equal(await js('!!document.querySelector("#custom-answer-prompt")'),false);
   console.log('[window-lifecycle] translucent region, cached image and destroy-on-cancel passed');
+  const requestsBeforeRecovery=requests,abortedBeforeRecovery=aborted;
+  const retainedSessionName=await js('document.querySelector(".session-picker > button").textContent');
   await js('window.mc.captureStarted(); window.mc.llmAsk({requestId:"window-qa-stream",mode:"free",freeQuestion:"synthetic",recentTranscript:[]});');
-  await until(() => requests > 0, 'local model received request');
+  await until(() => requests > requestsBeforeRecovery, 'local model received request');
   const oldPid = win.webContents.getOSProcessId(); win.emit('unresponsive');
   const loaded = new Promise((resolve, reject) => {
     const timeout = setTimeout(() => reject(Error('Recovered renderer did not finish loading')), 20_000);
@@ -110,14 +169,37 @@ async function run() {
   menu('恢复界面（停止录音和生成）');
   await loaded;
   await until(async () => win.webContents.getOSProcessId() !== oldPid && !win.webContents.isLoading() && await js('document.body.textContent.includes("界面已恢复")'), 'interface recovery');
-  await until(() => aborted > 0, 'generation aborted');
+  await until(() => aborted > abortedBeforeRecovery, 'generation aborted');
   assert.equal(win.isFocusable(), false); assert.equal(focusEvents, 0);
   assert(template.some(i => i.label === '开始转写'), 'recovery must stop capture state');
-  assert.equal(await js('document.querySelector(".session-picker > button").textContent.includes("Window QA")'), true);
+  assert.equal(await js('document.querySelector(".session-picker > button").textContent'), retainedSessionName);
   await until(() => fs.existsSync(path.join(profile, 'window-faults.json')), 'fault log written');
   const faults = fs.readFileSync(path.join(profile, 'window-faults.json'), 'utf8');
   assert(faults.includes('unresponsive')); assert(!faults.includes('fake-window-qa')); assert(!faults.includes('synthetic pending question'));
   console.log('[window-lifecycle] recovery, generation abort, capture reset, saved session and sanitized fault log passed');
-  fs.writeFileSync(path.join(qa, 'result.json'), JSON.stringify({ passed: true, idleMs, styleWrites, focusEvents, nativeHides, chromiumMouseInput: true, nativeBrowserAcceptance: 'not tested' }, null, 2));
+  const browseFocusEvents=focusEvents,browseStyleWrites=styleWrites;
+  await js('document.querySelector(".interaction-mode").click()');
+  await until(()=>js('window.mc.getWindowMode().then(m=>m==="edit")'),'explicit edit');
+  await js('window.__mcOpenSettings()');
+  await until(()=>js('!!document.querySelector("#custom-answer-prompt")'),'settings in edit');
+  await js('Array.from(document.querySelectorAll(".settings-actions button")).find(b=>b.textContent==="取消").click()');
+  await until(()=>js('window.mc.getWindowMode().then(m=>m==="browse")'),'settings cancel returns browse');
+  await js('window.mc.setWindowMode("edit")'); assert.equal(await js('window.mc.pickKnowledge("resume")'),null);
+  assert.equal(await js('window.mc.getWindowMode()'),'browse');assert.equal(fileDialogs,1);
+  const fixture=path.join(profile,'fixture.txt');fs.writeFileSync(fixture,'synthetic library import');selection=[fixture];
+  await js('window.mc.setWindowMode("edit")');assert.equal((await js('window.mc.importKnowledge()')).documents.length,1);
+  assert.equal(await js('window.mc.getWindowMode()'),'browse');selection=[];
+  for (const key of ['Escape','Enter']) {
+    await js('window.mc.setWindowMode("edit")');await js('document.querySelector("button[title=重命名当前会话]").click()');
+    await until(()=>js('!!document.querySelector("input.session-select")'),'rename in edit');
+    await js(`document.querySelector("input.session-select").dispatchEvent(new KeyboardEvent("keydown",{key:${JSON.stringify(key)},bubbles:true}))`);
+    await until(()=>js('window.mc.getWindowMode().then(m=>m==="browse")'),'rename finish returns browse');
+  }
+  await js('window.mc.setWindowMode("edit")'); assert.equal(await js('window.mc.rerunOnboarding()'),true);
+  await until(()=>BrowserWindow.getAllWindows().some(w=>w!==win),'setup opened');
+  BrowserWindow.getAllWindows().find(w=>w!==win).close();
+  await until(()=>js('window.mc.getWindowMode().then(m=>m==="browse")'),'setup close returns browse');
+  console.log('[window-lifecycle] explicit editing, settings cancel, file cancel/import, rename and setup return to browse');
+  fs.writeFileSync(path.join(qa, 'result.json'), JSON.stringify({ passed: true, idleMs, styleWrites:browseStyleWrites, focusEvents:browseFocusEvents, nativeHides, chromiumMouseInput: true, browseLock:true, editCompletion:true, nativeBrowserAcceptance: 'not tested' }, null, 2));
   clearTimeout(timer); server.closeAllConnections(); await new Promise(r => server.close(r)); app.quit();
 }

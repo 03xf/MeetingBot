@@ -24,6 +24,8 @@ import {
 } from '../shared/platform';
 import { AsrHost } from './asrHost';
 import { TrayWindowVisibility, prepareRegionWindow } from './windowInteraction';
+import { browseLocked } from '../shared/interactionPolicy';
+import type { BlockedInteraction } from '../shared/protocol';
 import { RegionCapture } from './regionCapture';
 import { WindowFaults } from './windowFaults';
 import type { WindowInteractionMode } from '../shared/protocol';
@@ -156,6 +158,17 @@ function bootstrap(): void {
     return mode;
   }
 
+  function allowInteraction(action: BlockedInteraction): boolean {
+    if (!browseLocked(process.platform, windowMode)) return true;
+    windowVisibility?.show('browse');
+    win?.webContents.send(IPC.interactionBlocked, { action });
+    return false;
+  }
+
+  function finishEditing(): void {
+    if (process.platform === 'win32') setWindowMode('browse');
+  }
+
   /** main-process strings in the current UI language */
   const T = () => mainStrings(settings.data.ui.lang, osLang);
 
@@ -286,13 +299,14 @@ function bootstrap(): void {
       return;
     }
     if (command === 'check-updates') {
+      if (!allowInteraction('external')) return;
       void openExternalUrl(RELEASES_URL);
       return;
     }
     if (isRendererCommand(command)) {
       // capture, sessions and the panels live in the renderer; a hidden window
       // would swallow the result, so make it visible first
-      if (command === 'open-settings') setWindowMode('edit');
+      if (command === 'open-settings') { if (!allowInteraction('settings')) return; }
       else showWindow();
       win?.webContents.send(IPC.trayCommand, { command });
     }
@@ -753,7 +767,8 @@ function bootstrap(): void {
       return state;
     });
     // main window -> "重新运行配置向导" / the upgrade notice
-    ipcMain.handle(IPC.onboardingRerun, () => {
+    ipcMain.handle(IPC.onboardingRerun, (e) => {
+      if (e.sender !== win?.webContents || !allowInteraction('setup')) return false;
       openSetupWindow(true);
       return true;
     });
@@ -761,7 +776,11 @@ function bootstrap(): void {
     // ---- app shell services (wizard + main window) ----
     // The renderer never navigates: window.open is denied and will-navigate is
     // prevented, so documentation links come back here to be validated.
-    ipcMain.handle(IPC.externalOpen, (_e, url: unknown) => openExternalUrl(url));
+    ipcMain.handle(IPC.externalOpen, (e, url: unknown) => {
+      if (e.sender === setupWin?.webContents) return openExternalUrl(url);
+      if (e.sender !== win?.webContents || !allowInteraction('external')) return false;
+      return openExternalUrl(url);
+    });
     // read on an explicit paste-button click only — never polled
     ipcMain.handle(IPC.clipboardReadText, () => clipboard.readText());
     ipcMain.handle(IPC.clipboardWriteText, (e, text: string) => {
@@ -857,7 +876,8 @@ function bootstrap(): void {
       });
     });
 
-    ipcMain.handle(IPC.logsOpenFolder, async (): Promise<boolean> => {
+    ipcMain.handle(IPC.logsOpenFolder, async (e): Promise<boolean> => {
+      if (e.sender !== win?.webContents || !allowInteraction('data-folder')) return false;
       // userData holds settings.json, sessions.json and knowledge.md -- the
       // exact folder a user needs when asked to check or wipe their data
       const err = await shell.openPath(app.getPath('userData'));
@@ -875,46 +895,50 @@ function bootstrap(): void {
       knowledge.remove(id);
       return knowledge.summary();
     });
-    ipcMain.handle(IPC.knowledgeImport, async (): Promise<KnowledgeImportResult> => {
-      setWindowMode('edit');
-      const r = await dialog.showOpenDialog({
-        title: T().kbImportTitle,
-        filters: [{ name: T().docFilter, extensions: [...DOC_EXTENSIONS] }],
-        properties: ['openFile', 'multiSelections'],
-      });
-      const failures: KnowledgeImportResult['failures'] = [];
-      for (const path of r.canceled ? [] : r.filePaths) {
-        try {
-          if (statSync(path).size > 20 * 1024 * 1024) throw new Error('TOO_LARGE');
-          knowledge.add(basename(path), await extractDocText(path));
-        } catch (e) {
-          const message = (e as Error).message;
-          failures.push({ name: basename(path), code: message === 'NO_TEXT' || message === 'TOO_LARGE' ? message : 'READ_FAILED' });
+    ipcMain.handle(IPC.knowledgeImport, async (e): Promise<KnowledgeImportResult> => {
+      if (e.sender !== win?.webContents || !allowInteraction('import')) return { ...knowledge.summary(), failures: [] };
+      try {
+        const r = await dialog.showOpenDialog({
+          title: T().kbImportTitle,
+          filters: [{ name: T().docFilter, extensions: [...DOC_EXTENSIONS] }],
+          properties: ['openFile', 'multiSelections'],
+        });
+        const failures: KnowledgeImportResult['failures'] = [];
+        for (const path of r.canceled ? [] : r.filePaths) {
+          try {
+            if (statSync(path).size > 20 * 1024 * 1024) throw new Error('TOO_LARGE');
+            knowledge.add(basename(path), await extractDocText(path));
+          } catch (e) {
+            const message = (e as Error).message;
+            failures.push({ name: basename(path), code: message === 'NO_TEXT' || message === 'TOO_LARGE' ? message : 'READ_FAILED' });
+          }
         }
-      }
-      return { ...knowledge.summary(), failures };
+        return { ...knowledge.summary(), failures };
+      } finally { finishEditing(); }
     });
     ipcMain.handle(IPC.knowledgeClear, () => {
       knowledge.clear();
       return knowledge.summary();
     });
-    ipcMain.handle(IPC.knowledgePick, async (_e, slot: 'resume' | 'jd' = 'resume') => {
-      setWindowMode('edit');
-      const r = await dialog.showOpenDialog({
-        title: slot === 'jd' ? T().pickJdTitle : T().pickResumeTitle,
-        filters: [{ name: T().docFilter, extensions: [...DOC_EXTENSIONS] }],
-        properties: ['openFile'],
-      });
-      if (r.canceled || !r.filePaths[0]) return null;
+    ipcMain.handle(IPC.knowledgePick, async (e, slot: 'resume' | 'jd' = 'resume') => {
+      if (e.sender !== win?.webContents || !allowInteraction('import')) return null;
       try {
-        // deterministic parse (mammoth / pdf-parse) — no LLM in the loop;
-        // '' for scanned PDFs, the renderer warns the user
-        const text = await extractDocText(r.filePaths[0]);
-        return { name: basename(r.filePaths[0]), text, chars: text.length };
-      } catch (e) {
-        console.error('[knowledge] pick failed:', (e as Error).message);
-        return null;
-      }
+        const r = await dialog.showOpenDialog({
+          title: slot === 'jd' ? T().pickJdTitle : T().pickResumeTitle,
+          filters: [{ name: T().docFilter, extensions: [...DOC_EXTENSIONS] }],
+          properties: ['openFile'],
+        });
+        if (r.canceled || !r.filePaths[0]) return null;
+        try {
+          // deterministic parse (mammoth / pdf-parse) — no LLM in the loop;
+          // '' for scanned PDFs, the renderer warns the user
+          const text = await extractDocText(r.filePaths[0]);
+          return { name: basename(r.filePaths[0]), text, chars: text.length };
+        } catch (e) {
+          console.error('[knowledge] pick failed:', (e as Error).message);
+          return null;
+        }
+      } finally { finishEditing(); }
     });
     ipcMain.handle(IPC.sessionsLoad, () => sessionStore.load());
     ipcMain.on(IPC.sessionsSave, (_e, data) => sessionStore.save(data));

@@ -18,6 +18,7 @@ import {
   type SettingsPatch,
   type TrayCommandPayload,
   type WindowInteractionMode,
+  type InteractionBlockedEvent,
 } from '../shared/protocol';
 
 export interface McApi {
@@ -25,6 +26,7 @@ export interface McApi {
   getRecoveryNotice(): Promise<string | null>;
   setWindowMode(mode: WindowInteractionMode): Promise<WindowInteractionMode>;
   onWindowModeChanged(cb: (mode: WindowInteractionMode) => void): () => void;
+  onInteractionBlocked(cb: (event: InteractionBlockedEvent) => void): () => void;
   writeClipboardText(text: string): Promise<void>;
   readonly platform: NodeJS.Platform;
   getSettings(): Promise<PublicSettings>;
@@ -108,6 +110,11 @@ const api: McApi = {
     return () => ipcRenderer.removeListener(IPC.windowModeChanged, listener);
   },
   writeClipboardText: (text) => ipcRenderer.invoke(IPC.clipboardWriteText, text),
+  onInteractionBlocked: (cb) => {
+    const listener = (_e: Electron.IpcRendererEvent, event: InteractionBlockedEvent) => cb(event);
+    ipcRenderer.on(IPC.interactionBlocked, listener);
+    return () => ipcRenderer.removeListener(IPC.interactionBlocked, listener);
+  },
   platform: process.platform,
   getSettings: () => ipcRenderer.invoke(IPC.settingsGet),
   setSettings: (patch) => ipcRenderer.invoke(IPC.settingsSet, patch),

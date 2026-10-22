@@ -4,6 +4,8 @@
  */
 export const PROTOCOL_VERSION = 1;
 export type WindowInteractionMode = 'browse' | 'edit';
+export type BlockedInteraction = 'settings' | 'import' | 'rename' | 'input' | 'setup' | 'external' | 'data-folder';
+export interface InteractionBlockedEvent { action: BlockedInteraction }
 
 import type { ProviderCapability, ProviderId } from './providerCatalog';
 export type { ProviderCapability, ProviderId } from './providerCatalog';
@@ -553,6 +555,7 @@ export interface TrayCommandPayload {
 export const IPC = {
   windowModeGet: 'window:mode-get',
   windowModeSet: 'window:mode-set',
+  interactionBlocked: 'window:interaction-blocked',
   windowModeChanged: 'window:mode-changed',
   windowRecoveryGet: 'window:recovery-get',
   clipboardWriteText: 'app:clipboard-write',
