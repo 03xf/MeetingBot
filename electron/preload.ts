@@ -78,6 +78,9 @@ export interface McApi {
   memoUpdate(p: { memo: string; question: string; answer: string }): Promise<string>;
   onLlmEvent(cb: (ev: LlmEvent) => void): () => void;
   onShotHotkey(cb: () => void): () => void;
+  onConfirmHotkey(cb: () => void): () => void;
+  getHotkeyFailures(): Promise<string[]>;
+  onHotkeyFailures(cb: (keys: string[]) => void): () => void;
   /** tray menu entries only the renderer can service (capture / session /
    * panels). Main has already made the window visible when this fires. */
   onTrayCommand(cb: (payload: TrayCommandPayload) => void): () => void;
@@ -159,6 +162,17 @@ const api: McApi = {
     const listener = () => cb();
     ipcRenderer.on(IPC.shotHotkey, listener);
     return () => ipcRenderer.removeListener(IPC.shotHotkey, listener);
+  },
+  onConfirmHotkey: (cb) => {
+    const listener = () => cb();
+    ipcRenderer.on(IPC.confirmHotkey, listener);
+    return () => ipcRenderer.removeListener(IPC.confirmHotkey, listener);
+  },
+  getHotkeyFailures: () => ipcRenderer.invoke(IPC.hotkeyFailuresGet),
+  onHotkeyFailures: (cb) => {
+    const listener = (_e: Electron.IpcRendererEvent, keys: string[]) => cb(keys);
+    ipcRenderer.on(IPC.hotkeyFailures, listener);
+    return () => ipcRenderer.removeListener(IPC.hotkeyFailures, listener);
   },
   onTrayCommand: (cb) => {
     const listener = (_e: Electron.IpcRendererEvent, payload: TrayCommandPayload) => cb(payload);

@@ -470,6 +470,9 @@ const zh = {
     otherSection: '其他',
     otherHint:
       '麦克风开关与多模态切换在标题栏；简历/岗位JD 在右栏「📄简历」「📋JD」按会话导入（支持 docx/pdf）。',
+    hotkeyConfirm: '截到此刻并回答快捷键',
+    hotkeyHint: '回答快捷键默认留空，请自行填写组合键；保存后全局生效，窗口隐藏时也可使用，留空即禁用。示例格式：Control+Shift+F9。',
+    hotkeyFailed: (keys: string) => `快捷键注册失败：${keys}。可能已被占用、重复或格式无效，请在编辑模式的设置中修改。`,
     hotkeyToggle: '呼出/隐藏快捷键',
     hotkeyShot: '截图快捷键（框选截图问答，如 Control+Shift+S）',
     autoLaunch: '开机自动启动',
@@ -948,6 +951,9 @@ const en: Dict = {
     otherSection: 'Other',
     otherHint:
       'The mic toggle and Text/Vision live in the title bar; import the resume/JD per session via “📄Resume” “📋JD” in the right pane (docx/pdf supported).',
+    hotkeyConfirm: 'Cut and answer hotkey',
+    hotkeyHint: 'The answer shortcut starts blank. Choose your own combination; Save applies it globally, including while hidden. Blank disables it. Format example: Control+Shift+F9.',
+    hotkeyFailed: (keys: string) => `Hotkey registration failed: ${keys}. It may be occupied, duplicated or invalid. Change it in Settings using Edit mode.`,
     hotkeyToggle: 'Show/hide hotkey',
     hotkeyShot: 'Screenshot hotkey (region screenshot Q&A, e.g. Control+Shift+S)',
     autoLaunch: 'Start at login',

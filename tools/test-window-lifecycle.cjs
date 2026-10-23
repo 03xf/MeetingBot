@@ -14,7 +14,7 @@ if (!process.versions.electron) {
 void run().catch(e => { console.error(e); require('electron').app.exit(1); });
 
 async function run() {
-  const { app, safeStorage, Menu, BrowserWindow, desktopCapturer, nativeImage, screen, dialog, shell, globalShortcut, clipboard } = require('electron');
+  const { app, safeStorage, Menu, BrowserWindow, desktopCapturer, nativeImage, screen, dialog, shell, globalShortcut, clipboard, ipcMain } = require('electron');
   const { createServer } = require('node:http');
   const qa = path.resolve(root, '..', 'window-qa'); fs.mkdirSync(qa, { recursive: true });
   const profile = fs.mkdtempSync(path.join(qa, 'profile-'));
@@ -28,7 +28,9 @@ async function run() {
   let copied;
   clipboard.writeText = text => { copied = text; }; // never replace the user's clipboard
   const shortcuts = new Map();
-  globalShortcut.register = (key, callback) => { shortcuts.set(key, callback); return true; };
+  globalShortcut.unregisterAll = () => shortcuts.clear();
+  globalShortcut.isRegistered = key => shortcuts.has(key);
+  globalShortcut.register = (key, callback) => { if (key === 'occupied') return false; if (key === 'invalid') throw Error('synthetic accelerator error'); shortcuts.set(key, callback); return true; };
   let fileDialogs = 0, shellCalls = 0, selection = [];
   dialog.showOpenDialog = async () => { fileDialogs++; return { canceled: !selection.length, filePaths: selection }; };
   shell.openExternal = async () => { shellCalls++; };
@@ -49,7 +51,7 @@ async function run() {
   fs.writeFileSync(path.join(profile, 'settings.json'), JSON.stringify({ version: 2, onboarding: { schemaVersion: 1, completed: true },
     llm: { baseUrl: url, model: 'fake', apiKeyEnc: key }, vision: { baseUrl: 'https://api.xiaomimimo.com/v1', model: 'mimo-v2.5', apiKeyEnc: key, verification: {lastTestOk:false,lastTestCode:'UNKNOWN_ERROR'} },
     asr: { backend: 'cloud', cloud: { baseUrl: url, model: 'fake', apiKeyEnc: key } },
-    ui: { lang: 'zh', theme: 'dark', stealth: true, hotkeyToggle: '', hotkeyShot: 'Control+Alt+F10' } }));
+    ui: { lang: 'zh', theme: 'dark', stealth: true, hotkeyToggle: '', hotkeyShot: 'Control+Alt+F10', hotkeyConfirm: 'Control+Alt+Enter' } }));
   fs.writeFileSync(path.join(profile, 'sessions.json'), JSON.stringify({ currentId: 'qa', sessions: [{ id: 'qa', name: 'Window QA', createdAt: 1, questionQueueVersion: 1,
     segments: [], pendingQuestion: [{ id: 'heard-1', segmentId: 1, text: 'synthetic pending question' }], turns: [
       { id: 'previous', kind: 'vision', label: 'synthetic screenshot', text: '', status: 'streaming' },
@@ -115,11 +117,29 @@ async function run() {
   await until(() => js('!!document.querySelector(".session-menu")'), 'mouse input after tray wake');
   await js('document.querySelector(".session-option").click()');
   console.log('[window-lifecycle] repeated hide/show and hidden-idle IPC passed');
-  await js('document.querySelector(".titlebar-actions button:nth-child(2)").click()');
+  menu('隐藏窗口');
+  const confirmKey = 'Control+Alt+Enter';
+  assert(shortcuts.has(confirmKey));
+  shortcuts.get(confirmKey)();shortcuts.get(confirmKey)(); // repeated callbacks must not cancel or duplicate
+
   await until(()=>requests>0,'manual confirmation reaches local model');
   await until(()=>js('Array.from(document.querySelectorAll(".turn-head button")).some(b=>b.textContent==="停")'),'stop generation available');
+  assert.equal(requests,1,'repeated answer hotkey submits once');
+  assert.equal(win.getOpacity(),0,'answer shortcut must leave the window hidden');
+  menu('显示窗口');
   await js('Array.from(document.querySelectorAll(".turn-head button")).find(b=>b.textContent==="停").click()');
-  await until(()=>aborted>0,'manual stop aborts generation');
+  await until(()=>aborted>0,'stop button aborts generation');
+  // Hold only the finalization marker, to exercise cancellation while ASR is pending.
+  const cutHandler=ipcMain.listeners('asr:cut')[0];let heldCut;
+  ipcMain.removeListener('asr:cut',cutHandler);
+  ipcMain.once('asr:cut',(_event,id)=>{heldCut=id});
+  shortcuts.get(confirmKey)();await until(()=>!!heldCut,'cut waiting');
+  await until(()=>js('document.body.textContent.includes("正在整理截断前的问题")'),'waiting indicator');
+  const requestCount=requests;await js('document.querySelector(".titlebar-actions button:nth-child(2)").click()');
+  await until(()=>js('!document.body.textContent.includes("正在整理截断前的问题")'),'waiting submission cancelled');
+  win.webContents.send('asr:event',{kind:'cut',requestId:heldCut});
+  await pause(100);assert.equal(requests,requestCount,'late finalization must not submit after stop');
+  ipcMain.on('asr:cut',cutHandler);
   await js('document.querySelector(".turn-head button").click();document.querySelector(".session").scrollTop=0');
   await until(()=>copied!==undefined,'copy through main clipboard interface');
   assert.equal(focusEvents,0);assert.equal(win.isFocusable(),false);
@@ -177,6 +197,18 @@ async function run() {
   const faults = fs.readFileSync(path.join(profile, 'window-faults.json'), 'utf8');
   assert(faults.includes('unresponsive')); assert(!faults.includes('fake-window-qa')); assert(!faults.includes('synthetic pending question'));
   console.log('[window-lifecycle] recovery, generation abort, capture reset, saved session and sanitized fault log passed');
+  await js('window.mc.setSettings({ui:{hotkeyConfirm:"occupied"}})');
+  assert.deepEqual(await js('window.mc.getHotkeyFailures()'),['occupied']);
+  await until(()=>js('document.body.textContent.includes("快捷键注册失败")'),'registration error visible');
+  await js('window.mc.setSettings({ui:{hotkeyConfirm:"invalid"}})');
+  assert.deepEqual(await js('window.mc.getHotkeyFailures()'),['invalid']);
+  await js('window.mc.setSettings({ui:{hotkeyConfirm:"Control+Alt+F9"}})');
+  assert.equal(shortcuts.has(confirmKey),false);assert(shortcuts.has('Control+Alt+F9'));
+  assert.deepEqual(await js('window.mc.getHotkeyFailures()'),[]);
+  await until(()=>js('!document.body.textContent.includes("快捷键注册失败")'),'registration error cleared');
+  await js('window.mc.setSettings({ui:{hotkeyConfirm:""}})');assert.equal(shortcuts.has('Control+Alt+F9'),false);
+  assert.equal(focusEvents,0);assert.equal(win.isFocusable(),false);
+  console.log('[window-lifecycle] hidden answer hotkey, repeated callbacks, rebind, disable and registration failures passed');
   const browseFocusEvents=focusEvents,browseStyleWrites=styleWrites;
   await js('document.querySelector(".interaction-mode").click()');
   await until(()=>js('window.mc.getWindowMode().then(m=>m==="edit")'),'explicit edit');

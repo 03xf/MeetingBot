@@ -6,11 +6,11 @@ export function captureKindForPlatform(platform: string): CaptureKind {
 }
 
 /** Defaults apply only to newly created settings; saved user choices win. */
-export function defaultHotkeysForPlatform(platform: string): { toggle: string; shot: string } {
+export function defaultHotkeysForPlatform(platform: string): { toggle: string; shot: string; confirm: string } {
   if (platform === 'darwin') {
-    return { toggle: 'Command+B', shot: 'Command+Shift+S' };
+    return { toggle: 'Command+B', shot: 'Command+Shift+S', confirm: '' };
   }
-  return { toggle: 'Control+B', shot: 'Control+Shift+S' };
+  return { toggle: 'Control+B', shot: 'Control+Shift+S', confirm: '' };
 }
 
 export function whisperExecutionProvidersForPlatform(

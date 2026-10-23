@@ -84,6 +84,7 @@ export function defaultSettings(platform: string = process.platform): SettingsFi
       stealth: true,
       hotkeyToggle: hotkeys.toggle,
       hotkeyShot: hotkeys.shot,
+      hotkeyConfirm: hotkeys.confirm,
       opacity: DEFAULT_BACKGROUND_OPACITY,
       // medium = 16px answer body (was 13px) — readable at a glance mid-interview
       fontScale: 'medium',

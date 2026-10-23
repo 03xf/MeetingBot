@@ -32,6 +32,17 @@ afterEach(() => {
 });
 
 describe('SettingsStore', () => {
+  it('fills the new answer hotkey for older profiles and preserves custom or disabled choices', () => {
+    writeFileSync(file, JSON.stringify({ version: 2, ui: { hotkeyToggle: 'Alt+Q', hotkeyShot: '' } }));
+    const store = new SettingsStore(file, fakeCipher);
+    const keys = defaultSettings().ui;
+    expect(store.getPublic().ui).toMatchObject({ hotkeyToggle: 'Alt+Q', hotkeyShot: '', hotkeyConfirm: keys.hotkeyConfirm });
+    store.applyPatch({ ui: { hotkeyConfirm: 'Alt+Enter' } });
+    expect(new SettingsStore(file, fakeCipher).getPublic().ui).toMatchObject({ hotkeyConfirm: 'Alt+Enter' });
+    store.applyPatch({ ui: { hotkeyConfirm: '' } });
+    expect(new SettingsStore(file, fakeCipher).getPublic().ui.hotkeyConfirm).toBe('');
+  });
+
   it('upgrades only retired official MiMo text/vision models and retains encrypted keys', () => {
     const original = defaultSettings();
     original.llm = { ...original.llm, baseUrl: 'https://api.xiaomimimo.com/v1', model: 'mimo-v2.5-pro', apiKeyEnc: fakeCipher.encrypt('fake-mimo-key'), verification: { lastTestOk: false, lastTestCode: 'UNKNOWN_ERROR' } };
@@ -312,10 +323,9 @@ describe('migrateSettingsV1ToV2 (pure)', () => {
     expect(v2.vision.proxyUrl).toBe('127.0.0.1:7897');
     expect(v2.asr.backend).toBe('cloud-realtime');
     expect(v2.asr.realtime?.baseUrl).toBe(V1_FILE.asr.realtime.baseUrl);
-    // Phase 4 added two ui fields. Everything the user had configured survives
-    // untouched; the new ones arrive with their OFF defaults, so upgrading can
-    // never silently register an existing profile for auto-start.
-    expect(v2.ui).toEqual({ ...V1_FILE.ui, autoLaunch: false, trayNoticeShown: false });
+    // Existing choices survive. The new answer key remains disabled, and
+    // upgrading never silently enables OS auto-start.
+    expect(v2.ui).toEqual({ ...V1_FILE.ui, hotkeyConfirm: defaultSettings().ui.hotkeyConfirm, autoLaunch: false, trayNoticeShown: false });
     expect(v2.audio).toEqual(V1_FILE.audio);
   });
 

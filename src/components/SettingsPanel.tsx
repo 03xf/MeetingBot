@@ -153,6 +153,7 @@ export function SettingsPanel({
     settings.asr.localRealtime.model ?? 'fun-asr-nano',
   );
   const [hotkeyShot, setHotkeyShot] = useState(settings.ui.hotkeyShot);
+  const [hotkeyConfirm, setHotkeyConfirm] = useState(settings.ui.hotkeyConfirm);
   const [autoLaunch, setAutoLaunch] = useState(settings.ui.autoLaunch);
   const [fontScale, setFontScale] = useState<FontScale>(settings.ui.fontScale ?? 'medium');
   const [theme, setTheme] = useState<ThemeMode>(settings.ui.theme ?? 'dark');
@@ -312,6 +313,7 @@ export function SettingsPanel({
         ui: {
           hotkeyToggle: hotkey.trim(),
           hotkeyShot: hotkeyShot.trim(),
+          hotkeyConfirm: hotkeyConfirm.trim(),
           fontScale,
           theme,
           opacity,
@@ -684,6 +686,11 @@ export function SettingsPanel({
           spellCheck={false}
         />
       </div>
+      <div className="settings-row">
+        <label htmlFor="hotkey-confirm">{t.settings.hotkeyConfirm}</label>
+        <input id="hotkey-confirm" value={hotkeyConfirm} onChange={(e) => setHotkeyConfirm(e.target.value)} spellCheck={false} />
+      </div>
+      <p className="settings-hint">{t.settings.hotkeyHint}</p>
       <div className="settings-row">
         <label>{t.settings.autoLaunch}</label>
         <select

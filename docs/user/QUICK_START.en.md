@@ -127,3 +127,7 @@ The tray menu also has Start/Stop transcription, New session, Settings, Service 
 1. Open **Help & guides** in the app (tray menu, or Settings → Help & guides). It works offline.
 2. Read [TROUBLESHOOTING.en.md](TROUBLESHOOTING.en.md) for the full error-code table.
 3. Still stuck: Settings → Advanced → Diagnostics, copy the report (it has no keys, resume text or transcripts) and open an issue at [GitHub Issues](https://github.com/03xf/MeetingBot/issues).
+
+## Answer hotkeys (beta.13)
+
+Enter Edit using the titlebar, then choose a combination for Cut and answer in Settings. Save applies it. It starts blank; blank disables it. `Control+Shift+F9` is a format example, not a preset. It works while hidden without showing the window. Registration failures appear inline. Saving restores Browse; return to your original page yourself.

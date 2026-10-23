@@ -10,10 +10,12 @@ describe('platform defaults', () => {
     expect(defaultHotkeysForPlatform('darwin')).toEqual({
       toggle: 'Command+B',
       shot: 'Command+Shift+S',
+      confirm: '',
     });
     expect(defaultHotkeysForPlatform('win32')).toEqual({
       toggle: 'Control+B',
       shot: 'Control+Shift+S',
+      confirm: '',
     });
   });
 

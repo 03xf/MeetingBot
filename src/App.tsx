@@ -85,6 +85,7 @@ export function App() {
   const [capturing, setCapturing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [windowNotice, setWindowNotice] = useState<string | null>(null);
+  const [hotkeyFailures, setHotkeyFailures] = useState<string[]>([]);
   const [windowMode, setWindowMode] = useState<WindowInteractionMode>(window.mc.platform === 'win32' ? 'browse' : 'edit');
   const modeEpochRef = useRef(0);
   const requestEdit = useCallback(async () => {
@@ -107,6 +108,12 @@ export function App() {
     void window.mc.getWindowMode().then(setWindowMode);
     void window.mc.getRecoveryNotice().then(setWindowNotice);
     return () => { off(); offBlocked(); };
+  }, []);
+  useEffect(() => {
+    let changed = false;
+    const off = window.mc.onHotkeyFailures((keys) => { changed = true; setHotkeyFailures(keys); });
+    void window.mc.getHotkeyFailures().then((keys) => { if (!changed) setHotkeyFailures(keys); });
+    return off;
   }, []);
   const [opacityPreview, setOpacityPreview] = useState<number | null>(null);
   const [showHealth, setShowHealth] = useState(false);
@@ -817,6 +824,11 @@ export function App() {
     });
   }, [answersReady, waitForFinal]);
 
+  useEffect(() => window.mc.onConfirmHotkey(() => {
+    // Repeated key callbacks must not toggle the waiting submission off.
+    if (!confirmDisabled && !waitingRef.current && !cutRef.current) confirmQuestion();
+  }), [confirmDisabled, confirmQuestion]);
+
   return (
     <I18nProvider lang={settings?.ui.lang}>
     <div className="app">
@@ -932,6 +944,11 @@ export function App() {
           </button>
         </div>
       </header>
+
+      {!!hotkeyFailures.length && <div className="upgrade-banner" role="alert">
+        <span>{t.settings.hotkeyFailed(hotkeyFailures.join(' / '))}</span>
+        <button className="btn btn-sm" onClick={() => setHotkeyFailures([])}>×</button>
+      </div>}
 
       {windowNotice && <div className="upgrade-banner" role="status">
         <span>{windowNotice}</span><button className="btn btn-sm" onClick={() => setWindowNotice(null)}>×</button>

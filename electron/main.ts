@@ -25,6 +25,7 @@ import {
 import { AsrHost } from './asrHost';
 import { TrayWindowVisibility, prepareRegionWindow } from './windowInteraction';
 import { browseLocked } from '../shared/interactionPolicy';
+import { registerBindings } from './hotkeys';
 import type { BlockedInteraction } from '../shared/protocol';
 import { RegionCapture } from './regionCapture';
 import { WindowFaults } from './windowFaults';
@@ -363,25 +364,21 @@ function bootstrap(): void {
     }
   }
 
+  let hotkeyFailures: string[] = [];
   function registerHotkeys(): void {
     globalShortcut.unregisterAll();
-    const toggle = settings.data.ui.hotkeyToggle;
-    const shot = settings.data.ui.hotkeyShot;
-    try {
-      if (toggle) {
-        const ok = globalShortcut.register(toggle, () => toggleWindow());
-        if (!ok) console.warn(`[main] hotkey ${toggle} registration failed (in use?)`);
-      }
-      if (shot) {
-        const ok = globalShortcut.register(shot, () => {
-          if (regionIsActive()) cancelRegion();
-          else win?.webContents.send(IPC.shotHotkey);
-        });
-        if (!ok) console.warn(`[main] shot hotkey ${shot} registration failed (in use?)`);
-      }
-    } catch (e) {
-      console.warn('[main] hotkey register error:', (e as Error).message);
-    }
+    const ui = settings.data.ui;
+    hotkeyFailures = registerBindings([
+      { key: ui.hotkeyToggle, run: () => toggleWindow() },
+      { key: ui.hotkeyShot, run: () => {
+        if (regionIsActive()) cancelRegion();
+        else win?.webContents.send(IPC.shotHotkey);
+      } },
+      // Answer actions do not show, focus or change the mode of the window.
+      { key: ui.hotkeyConfirm, run: () => win?.webContents.send(IPC.confirmHotkey) },
+    ], (key, run) => !globalShortcut.isRegistered(key) && globalShortcut.register(key, run));
+    if (hotkeyFailures.length) console.warn('[main] hotkey registration failed:', hotkeyFailures.join(', '));
+    win?.webContents.send(IPC.hotkeyFailures, hotkeyFailures);
   }
 
   function createWindow(): void {
@@ -690,6 +687,7 @@ function bootstrap(): void {
       asr.flush();
     }
     ipcMain.on(IPC.captureStopped, markCaptureStopped);
+    ipcMain.handle(IPC.hotkeyFailuresGet, () => [...hotkeyFailures]);
     ipcMain.handle(IPC.windowModeGet, () => windowMode);
     ipcMain.handle(IPC.windowRecoveryGet, () => recoveryNotice);
     ipcMain.handle(IPC.windowModeSet, (e, mode: WindowInteractionMode) => {
@@ -706,7 +704,8 @@ function bootstrap(): void {
     ipcMain.handle(IPC.settingsSet, (_e, patch: SettingsPatch) => {
       settings.applyPatch(patch);
       if (patch.llm?.customPrompt !== undefined) lastPrefix = null;
-      if (patch.ui?.hotkeyToggle !== undefined || patch.ui?.hotkeyShot !== undefined) {
+      if (patch.ui?.hotkeyToggle !== undefined || patch.ui?.hotkeyShot !== undefined ||
+        patch.ui?.hotkeyConfirm !== undefined) {
         registerHotkeys();
       }
       if (patch.ui?.stealth !== undefined) {

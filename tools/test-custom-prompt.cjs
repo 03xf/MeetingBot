@@ -23,7 +23,9 @@ if (!process.versions.electron) {
 }
 
 async function run() {
-  const { app, safeStorage } = require('electron');
+  const { app, safeStorage, globalShortcut } = require('electron');
+  // Exercise settings persistence without reserving keys on the user's desktop.
+  globalShortcut.register = () => true; globalShortcut.isRegistered = () => false; globalShortcut.unregisterAll = () => {};
   const { createServer } = require('node:http');
   const profile = process.env.MC_PROMPT_TEST_PROFILE;
   assert(profile && path.dirname(path.dirname(profile)) === qa);
@@ -117,6 +119,7 @@ async function run() {
   }
   async function save(value) {
     await open();
+    await js(`(()=>{for(const [id,value] of [['hotkey-confirm','Control+Alt+F9']]){const e=document.getElementById(id);Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,value);e.dispatchEvent(new Event('input',{bubbles:true}))}})()`);
     await js(`(()=>{const e=document.querySelector('#custom-answer-prompt');Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(e,${JSON.stringify(value)});e.dispatchEvent(new Event('input',{bubbles:true}));})()`);
     await pause(50);
     await js(`document.querySelector('.settings-actions .btn-primary').click()`);
@@ -159,6 +162,7 @@ async function run() {
     await open();
     assert.equal(await js('document.querySelector("#background-transparency").value'), '75');
     assert.equal(await js('document.querySelector("#custom-answer-prompt").value'), prompt);
+    assert.equal(await js('document.querySelector("#hotkey-confirm").value'), 'Control+Alt+F9');
     await js(`Array.from(document.querySelectorAll('.settings-actions button')).find(e=>e.textContent==='取消').click()`);
     await ask('free', prompt);
   } else {
