@@ -128,6 +128,11 @@ The tray menu also has Start/Stop transcription, New session, Settings, Service 
 2. Read [TROUBLESHOOTING.en.md](TROUBLESHOOTING.en.md) for the full error-code table.
 3. Still stuck: Settings → Advanced → Diagnostics, copy the report (it has no keys, resume text or transcripts) and open an issue at [GitHub Issues](https://github.com/03xf/MeetingBot/issues).
 
-## Answer hotkeys (beta.13)
+## Two-press audio range selection (beta.14)
 
-Enter Edit using the titlebar, then choose a combination for Cut and answer in Settings. Save applies it. It starts blank; blank disables it. `Control+Shift+F9` is a format example, not a preset. It works while hidden without showing the window. Registration failures appear inline. Saving restores Browse; return to your original page yourself.
+1. Enter Edit and configure Start range / end and answer in Settings, for example `Right`. Existing bindings are retained; blank disables it. Saving restores Browse.
+2. Click Start and wait for Capture ready.
+3. Tap the hotkey once to mark the start. The app shows Recording selected range.
+4. Tap it again to mark the end. Only this interval forms the current question; answering waits for recognition. Capture stays open for the next round.
+
+Wait while the interval is being finalized or the answer is generating. Stopping capture, switching sessions or clearing transcripts cancels the unsubmitted range. Raw transcripts remain visible, including outside speech, which is excluded from the current question and recent transcript context. Fillers inside the interval are not additionally removed. Outside range mode the existing Cut and answer button still merges pending questions; during a range it becomes End range and answer.

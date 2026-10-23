@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { StoredSession } from '../shared/protocol';
-import { claimQuestion, clearQuestionTranscript, collectQuestionSegment, hasPendingAnswer, loadQuestionSession, questionText, restoreQuestion } from '../shared/questionQueue';
+import { beginQuestionRange, claimQuestion, clearQuestionTranscript, collectQuestionSegment, hasPendingAnswer, loadQuestionSession, questionText, restoreQuestion } from '../shared/questionQueue';
 import { nextSegmentId } from '../shared/transcript';
 import { buildAnswerMessages } from '../electron/llm/prompts';
 
@@ -11,6 +11,13 @@ function hear(s: StoredSession, text: string, startTs = 0, speaker: 'them' | 'me
 }
 
 describe('manually confirmed question queue', () => {
+  it('starts a selected range without deleting raw transcripts or restoring earlier questions', () => {
+    const old = claimQuestion(hear(empty(), 'before range'), 'old')!;
+    const selected = hear(beginQuestionRange(old), 'inside range');
+    const restored = restoreQuestion(selected, 'old', 'late error');
+    expect(questionText(restored)).toBe('inside range');
+    expect(restored.segments?.map(s => s.text)).toEqual(['before range', 'inside range']);
+  });
   it('marks interrupted free and screenshot answers as errors when recovering the interface', () => {
     const s: StoredSession = { ...empty(), turns: [
       { id: 'free', kind: 'free', label: 'test', text: 'partial', status: 'streaming' },

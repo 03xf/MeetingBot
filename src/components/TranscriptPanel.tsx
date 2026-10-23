@@ -24,6 +24,7 @@ export function TranscriptPanel({
   pendingText,
   pendingCount,
   waiting,
+  rangeRecording,
   questionBusy,
   confirmDisabled,
   onConfirm,
@@ -39,6 +40,7 @@ export function TranscriptPanel({
   pendingText: string;
   pendingCount: number;
   waiting: boolean;
+  rangeRecording: boolean;
   questionBusy: boolean;
   confirmDisabled: boolean;
   onConfirm: () => void;
@@ -93,17 +95,17 @@ export function TranscriptPanel({
       </header>
       <div className="question-draft">
         <div className="question-draft-head">
-          <strong>{t.question.count(pendingCount)}</strong>
+          <strong>{rangeRecording ? t.question.rangeTitle : t.question.count(pendingCount)}</strong>
           <button
             className="btn btn-sm btn-primary question-confirm"
             disabled={!waiting && confirmDisabled}
             onClick={onConfirm}
             title={!answersReady ? answersHint : t.question.hint}
           >
-            {waiting ? t.question.cancelWait : questionBusy ? t.question.working : t.question.confirm}
+            {waiting ? t.question.cancelWait : rangeRecording ? t.question.rangeEnd : questionBusy ? t.question.working : t.question.confirm}
           </button>
         </div>
-        <p className="question-draft-hint">{waiting ? t.question.waiting : questionBusy ? t.question.collecting : t.question.hint}</p>
+        <p className="question-draft-hint">{waiting ? t.question.waiting : rangeRecording ? t.question.rangeHint : questionBusy ? t.question.collecting : t.question.hint}</p>
         {pendingText ? (
           <details className="question-preview">
             <summary>{t.question.preview}</summary>

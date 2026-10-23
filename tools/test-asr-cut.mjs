@@ -118,5 +118,64 @@ async function segmented() {
   }
 }
 
+async function selectedRange(backend) {
+  const audio = [];
+  let releaseBefore;
+  const texts = ['before range', 'inside range', 'after range'];
+  const streaming = backend === 'cloud-realtime';
+  const server = streaming ? new WebSocketServer({ host: '127.0.0.1', port: 0 }) : createServer(async (req, res) => {
+    let raw = ''; for await (const chunk of req) raw += chunk;
+    const body = JSON.parse(raw);
+    const wav = Buffer.from(body.messages[0].content[0].input_audio.data, 'base64');
+    const values=[];for(let i=44;i<wav.length;i+=2)if(wav.readInt16LE(i))values.push(wav.readInt16LE(i));
+    const index=audio.length;audio.push(values);
+    const reply=()=>{res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({choices:[{message:{content:texts[index]}}]}))};
+    if(index===0)releaseBefore=reply;else reply();
+  });
+  if(streaming){
+    await new Promise(resolve=>server.on('listening',resolve));
+    server.on('connection',ws=>{
+      const index=audio.length;const values=[];audio.push(values);
+      const send=(event,text)=>ws.send(JSON.stringify({header:{event},payload:text?{output:{sentence:{text,sentence_end:true,begin_time:0,end_time:100}}}:{}}));
+      ws.on('message',(data,binary)=>{
+        if(binary){const b=Buffer.from(data);for(let i=0;i<b.length;i+=2)if(b.readInt16LE(i))values.push(b.readInt16LE(i));return}
+        const action=JSON.parse(data.toString()).header.action;
+        if(action==='run-task')send('task-started');
+        if(action==='finish-task'){
+          const reply=()=>{send('result-generated',texts[index]);send('task-finished')};
+          if(index===0)releaseBefore=reply;else reply();
+        }
+      });
+    });
+  }else await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const w=worker(backend,`${streaming?'ws':'http'}://127.0.0.1:${server.address().port}`);
+  try{
+    await until(()=>w.events.some(e=>e.type==='ready'),'range engine ready');
+    w.send(0.1,4);
+    w.process.postMessage({type:'cut',requestId:'range-start'});
+    w.send(0.2,2);
+    w.process.postMessage({type:'cut',requestId:'range-end'});
+    w.send(0.3,4);
+    w.process.postMessage({type:'flush'});
+    await until(()=>releaseBefore,'prefix recognition held');
+    assert(!w.events.some(e=>e.type==='cut'),'both clicks occur before first ASR finalization');
+    releaseBefore();
+    await until(()=>w.events.filter(e=>e.type==='segment').length===3,'all three regions finalized');
+    const ordered=w.events.filter(e=>e.type==='cut'||e.type==='segment').map(e=>e.type==='cut'?e.requestId:e.text);
+    assert.deepEqual(ordered,['before range','range-start','inside range','range-end','after range']);
+    assert.equal(audio.length,3);
+    for(const [index,value] of [3276,6553,9830].entries())assert(audio[index].length>0&&audio[index].every(v=>v===value),'PCM must stay inside its own boundary');
+    assert(!w.events.some(e=>e.type==='error'||e.type==='crash'));
+    console.log(`[asr-range] ${backend}: two queued boundaries isolate the selected PCM, including a short tail and deferred stop`);
+  }finally{
+    await w.process.terminate();
+    if(streaming)for(const client of server.clients)client.terminate();else server.closeAllConnections();
+    await new Promise(resolve=>server.close(resolve));
+  }
+}
+
 await streaming();
 await segmented();
+
+await selectedRange('cloud-realtime');
+await selectedRange('cloud');

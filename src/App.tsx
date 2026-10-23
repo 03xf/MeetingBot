@@ -14,6 +14,7 @@ import {
   type TranscriptSegment,
 } from '../shared/transcript';
 import {
+  beginQuestionRange,
   claimQuestion,
   clearQuestionTranscript,
   collectQuestionSegment,
@@ -79,10 +80,23 @@ function deriveName(text: string, fallback: string): string {
   return t.length > 14 ? t.slice(0, 14) + '…' : t;
 }
 
+interface QuestionRange {
+  sid: string;
+  epoch: number;
+  startId: string;
+  endId?: string;
+  startDone: boolean;
+  endMarker?: Promise<void>;
+  cancelled?: boolean;
+}
+
 export function App() {
   const [settings, setSettings] = useState<PublicSettings | null>(null);
   const [asr, setAsr] = useState<AsrUiState>({ phase: 'loading', workerState: 'loading' });
   const [capturing, setCapturing] = useState(false);
+  const [captureStarting, setCaptureStarting] = useState(false);
+  const captureStartingRef = useRef(false);
+  const [rangeStage, setRangeStage] = useState<'recording' | 'finishing' | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [windowNotice, setWindowNotice] = useState<string | null>(null);
   const [hotkeyFailures, setHotkeyFailures] = useState<string[]>([]);
@@ -145,7 +159,8 @@ export function App() {
   const partialsRef = useRef<{ them?: string; me?: string }>({});
   const waitingRef = useRef<string | null>(null);
   const cutRef = useRef<{ requestId: string; sid: string; epoch: number } | null>(null);
-  const submitQuestionRef = useRef<() => void>(() => {});
+  const rangeRef = useRef<QuestionRange | null>(null);
+  const submitQuestionRef = useRef<(rangeOnly?: boolean) => void>(() => {});
 
   // UI language: settings-driven; ref mirror so stable callbacks stay fresh
   const t = getDict(settings?.ui.lang);
@@ -178,6 +193,35 @@ export function App() {
     waitingRef.current = sid;
     setWaitingConfirmation(sid);
   }, []);
+
+  const cancelRange = useCallback(async () => {
+    const range = rangeRef.current;
+    if (!range) return;
+    range.cancelled = true;
+    setRangeStage(null);
+    waitForFinal(null);
+    // Seal cancelled audio too. Keep routing its late finals to its original
+    // session until the ordered marker drains; never submit it automatically.
+    if (!range.endId) {
+      range.endId = uid('range-cancel');
+      const cap = captureKindForPlatform(window.mc.platform) === 'input' ? themInputRef.current! : loopbackRef.current!;
+      range.endMarker = cap.cut(range.endId, () => window.mc.asrCut(range.endId!));
+    }
+    try { await range.endMarker; }
+    catch (error) {
+      if (rangeRef.current === range) {
+        rangeRef.current = null;
+        setAsr((state) => ({ ...state, lastError: tRef.current.question.cutFailed(String(error)) }));
+      }
+    }
+  }, [waitForFinal]);
+  const failRange = useCallback((range: QuestionRange, error: unknown) => {
+    if (rangeRef.current !== range) return;
+    rangeRef.current = null;
+    setRangeStage(null);
+    waitForFinal(null);
+    setAsr((state) => ({ ...state, lastError: tRef.current.question.cutFailed(String(error)) }));
+  }, [waitForFinal]);
 
   const appendTurn = useCallback(
     (sessionId: string, turn: AnswerTurn) => {
@@ -249,7 +293,7 @@ export function App() {
   );
 
   const askLlm = useCallback(
-    (mode: 'segment' | 'continuous' | 'free' | 'translate', text?: string) => {
+    (mode: 'segment' | 'continuous' | 'free' | 'translate', text?: string, rangeOnly = false) => {
       const sid = currentIdRef.current;
       if (!sid) return;
       const requestId = uid('req');
@@ -271,7 +315,7 @@ export function App() {
         mode,
         question: mode === 'free' ? undefined : question,
         freeQuestion: mode === 'free' ? text : undefined,
-        recentTranscript: segs.slice(-30).map((s) => s.text),
+        recentTranscript: rangeOnly ? (session.pendingQuestion ?? []).map((c) => c.text) : segs.slice(-30).map((s) => s.text),
         answerLang: answerLangRef.current,
         history: mode === 'translate' ? undefined : buildHistory(),
         ...material,
@@ -302,7 +346,7 @@ export function App() {
     },
     [appendTurn, currentMaterial, maybeTitle],
   );
-  submitQuestionRef.current = () => askLlm('continuous');
+  submitQuestionRef.current = (rangeOnly) => askLlm('continuous', undefined, rangeOnly);
 
   /** region screenshot flow (📷 button or hotkey): drag a region, then ask */
   const doRegionShot = useCallback(async () => {
@@ -334,6 +378,40 @@ export function App() {
 
     const handleAsrEvent = (ev: AsrEvent) => {
       if (ev.kind === 'cut') {
+        const range = rangeRef.current;
+        if (range && (ev.requestId === range.startId || ev.requestId === range.endId)) {
+          partialsRef.current = { ...partialsRef.current, them: undefined };
+          setPartials(partialsRef.current);
+          const session = sessionsRef.current.find((s) => s.id === range.sid);
+          const valid = !range.cancelled && session && currentIdRef.current === range.sid &&
+            (session.questionEpoch ?? 0) === range.epoch;
+          if (ev.error) {
+            range.cancelled = true;
+            setAsr((state) => ({ ...state, lastError: tRef.current.question.cutFailed(ev.error!) }));
+          }
+          if (ev.requestId === range.startId) {
+            range.startDone = true;
+            if (valid && !ev.error) {
+              const next = beginQuestionRange(session);
+              range.epoch = next.questionEpoch!;
+              patchSession(range.sid, () => next);
+            } else {
+              range.cancelled = true;
+              setRangeStage(null);
+              waitForFinal(null);
+              if (!range.endId) rangeRef.current = null;
+            }
+          } else {
+            rangeRef.current = null;
+            setRangeStage(null);
+            waitForFinal(null);
+            if (valid && !ev.error) {
+              if (session.pendingQuestion?.length) submitQuestionRef.current(true);
+              else setWindowNotice(tRef.current.question.rangeEmpty);
+            }
+          }
+          return;
+        }
         const cut = cutRef.current;
         if (!cut || cut.requestId !== ev.requestId) return;
         cutRef.current = null;
@@ -356,6 +434,7 @@ export function App() {
       } else if (ev.kind === 'error') {
         setAsr((s) => ({ ...s, phase: ev.fatal ? 'error' : s.phase, lastError: ev.message }));
         waitForFinal(null);
+        cancelRange();
       } else if (ev.kind === 'partial') {
         partialsRef.current = { ...partialsRef.current, [ev.speaker]: ev.text };
         setPartials(partialsRef.current);
@@ -373,7 +452,7 @@ export function App() {
           p95: percentile(e2eSamples.current, 95),
           count: e2eSamples.current.length,
         });
-        const cut = ev.speaker === 'them' ? cutRef.current : null;
+        const cut = ev.speaker === 'them' ? (rangeRef.current ?? cutRef.current) : null;
         const sid = cut?.sid ?? currentIdRef.current;
         updateSessions((list) =>
           list.map((s) =>
@@ -496,7 +575,9 @@ export function App() {
   const startCapture = useCallback(async () => {
     const inputMode = captureKindForPlatform(window.mc.platform) === 'input';
     const cap = inputMode ? themInputRef.current! : loopbackRef.current!;
-    if (cap.running) return;
+    if (cap.running || captureStartingRef.current) return;
+    captureStartingRef.current = true;
+    setCaptureStarting(true);
     try {
       if (inputMode) {
         await themInputRef.current!.start(
@@ -510,14 +591,16 @@ export function App() {
       }
       window.mc.captureStarted();
       setCapturing(true);
+      setWindowNotice((notice) => notice === tRef.current.question.rangeNeedsCapture ? null : notice);
       prewarm(true); // ▶ = the meeting starts — build the KV prefix cache now
     } catch (e) {
       setAsr((s) => ({ ...s, lastError: tRef.current.app.captureStartFail((e as Error).message) }));
-    }
+    } finally { captureStartingRef.current = false; setCaptureStarting(false); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const stopCapture = useCallback(async () => {
+    await cancelRange();
     const cap =
       captureKindForPlatform(window.mc.platform) === 'input'
         ? themInputRef.current!
@@ -525,7 +608,7 @@ export function App() {
     await cap.stop();
     window.mc.captureStopped();
     setCapturing(false);
-  }, []);
+  }, [cancelRange]);
 
   // 🎤 独立麦克风采集：只转麦克风(我)，与系统声音互不影响，按钮直接控制起停
   const toggleMicCapture = useCallback(async () => {
@@ -614,6 +697,7 @@ export function App() {
     settingsRef.current = updated;
     const input = themInputRef.current!;
     if (input.running) {
+      await cancelRange();
       await input.stop();
       await input
         .start(
@@ -630,9 +714,10 @@ export function App() {
   }, []);
 
   const clearTranscript = useCallback(() => {
+    cancelRange();
     waitForFinal(null);
     patchSession(currentIdRef.current, clearQuestionTranscript);
-  }, [patchSession, waitForFinal]);
+  }, [patchSession, waitForFinal, cancelRange]);
 
   const cancelTurn = useCallback(
     (id: string) => {
@@ -647,12 +732,14 @@ export function App() {
   );
 
   const createSession = useCallback(() => {
+    cancelRange();
     const s = newSession(tRef.current.app.sessionN(sessionsRef.current.length + 1));
     updateSessions((list) => [...list, s]);
     setCurrentId(s.id);
-  }, [updateSessions]);
+  }, [updateSessions, cancelRange]);
 
   const deleteSession = useCallback((id: string) => {
+    cancelRange();
     updateSessions((list) => {
       const next = list.filter((s) => s.id !== id);
       if (next.length === 0) {
@@ -663,7 +750,7 @@ export function App() {
       setCurrentId((cur) => (cur === id ? next[0].id : cur));
       return next;
     });
-  }, [updateSessions]);
+  }, [updateSessions, cancelRange]);
 
   const clearAnswers = useCallback(() => {
     patchSession(currentIdRef.current, (s) => {
@@ -800,11 +887,42 @@ export function App() {
   );
   const answersReady = health?.answersAvailable ?? true;
   const questionBusy = !!current && hasPendingAnswer(current);
-  const questionCount = current?.pendingQuestion?.length ?? 0;
+  const questionCount = rangeStage && !rangeRef.current?.startDone ? 0 : current?.pendingQuestion?.length ?? 0;
   const waiting = waitingConfirmation === currentId;
-  const confirmDisabled = !answersReady || questionBusy ||
+  const confirmDisabled = rangeStage === 'recording' ? false : !answersReady || questionBusy ||
     (!questionCount && !partials.them?.trim() && !capturing && asr.workerState !== 'speech' && asr.workerState !== 'transcribing');
+  const toggleQuestionRange = useCallback(() => {
+    const cap = captureKindForPlatform(window.mc.platform) === 'input' ? themInputRef.current! : loopbackRef.current!;
+    const range = rangeRef.current;
+    if (range) {
+      if (range.cancelled) { setWindowNotice(tRef.current.question.stillCutting); return; }
+      if (range.endId) return;
+      range.endId = uid('range-end');
+      setRangeStage('finishing');
+      waitForFinal(range.sid);
+      range.endMarker = cap.cut(range.endId, () => window.mc.asrCut(range.endId!));
+      void range.endMarker.catch((error) => failRange(range, error));
+      return;
+    }
+    if (!cap.running || asr.phase !== 'ready') { setWindowNotice(tRef.current.question.rangeNeedsCapture); return; }
+    const session = sessionsRef.current.find((s) => s.id === currentIdRef.current);
+    if (!answersReady || !session || hasPendingAnswer(session) || cutRef.current || waitingRef.current) {
+      setWindowNotice(tRef.current.question.stillCutting);
+      return;
+    }
+    const next: QuestionRange = { sid: session.id, epoch: session.questionEpoch ?? 0, startId: uid('range-start'), startDone: false };
+    rangeRef.current = next;
+    setWindowNotice((notice) => notice === tRef.current.question.rangeEmpty || notice === tRef.current.question.stillCutting ? null : notice);
+    setRangeStage('recording');
+    void cap.cut(next.startId, () => window.mc.asrCut(next.startId)).catch((error) => failRange(next, error));
+  }, [answersReady, asr.phase, failRange, waitForFinal]);
+
   const confirmQuestion = useCallback(() => {
+    if (rangeRef.current) {
+      if (!rangeRef.current.cancelled && !rangeRef.current.endId) toggleQuestionRange();
+      else cancelRange();
+      return;
+    }
     if (waitingRef.current) { waitForFinal(null); return; }
     const s = sessionsRef.current.find((s) => s.id === currentIdRef.current);
     if (!answersReady || !s || hasPendingAnswer(s)) return;
@@ -822,12 +940,9 @@ export function App() {
       waitForFinal(null);
       setAsr((state) => ({ ...state, lastError: tRef.current.question.cutFailed(String(error)) }));
     });
-  }, [answersReady, waitForFinal]);
+  }, [answersReady, waitForFinal, toggleQuestionRange, cancelRange]);
 
-  useEffect(() => window.mc.onConfirmHotkey(() => {
-    // Repeated key callbacks must not toggle the waiting submission off.
-    if (!confirmDisabled && !waitingRef.current && !cutRef.current) confirmQuestion();
-  }), [confirmDisabled, confirmQuestion]);
+  useEffect(() => window.mc.onConfirmHotkey(toggleQuestionRange), [toggleQuestionRange]);
 
   return (
     <I18nProvider lang={settings?.ui.lang}>
@@ -838,7 +953,7 @@ export function App() {
           <button
             className={capturing ? 'btn btn-live' : 'btn btn-primary'}
             onClick={() => (capturing ? void stopCapture() : void startCapture())}
-            disabled={asr.phase !== 'ready'}
+            disabled={asr.phase !== 'ready' || captureStarting}
             title={
               captureKindForPlatform(window.mc.platform) === 'loopback'
                 ? capturing
@@ -849,7 +964,7 @@ export function App() {
                   : t.titlebar.startInputTitle
             }
           >
-            {capturing ? t.titlebar.stop : t.titlebar.start}
+            {captureStarting ? t.question.captureStarting : capturing ? t.titlebar.stop : t.titlebar.start}
           </button>
           {captureKindForPlatform(window.mc.platform) === 'input' && mics.length > 0 && (
             <select
@@ -873,7 +988,7 @@ export function App() {
             disabled={!waiting && confirmDisabled}
             title={t.question.hint}
           >
-            {waiting ? t.question.cancelWait : t.question.confirm} ({questionCount})
+            {waiting ? t.question.cancelWait : rangeStage === 'recording' ? t.question.rangeEnd : t.question.confirm} ({questionCount})
           </button>
           <button
             className={settings?.llm.answerWithVision ? 'btn btn-on' : 'btn'}
@@ -944,6 +1059,10 @@ export function App() {
           </button>
         </div>
       </header>
+
+      {(rangeStage || (capturing && settings?.ui.hotkeyConfirm)) && <div className="upgrade-banner" role="status" data-range-stage={rangeStage ?? 'ready'}>
+        <span>{rangeStage === 'recording' ? t.question.rangeRecording(settings?.ui.hotkeyConfirm ?? '') : rangeStage === 'finishing' ? t.question.rangeFinalizing : t.question.rangeReady(settings?.ui.hotkeyConfirm ?? '')}</span>
+      </div>}
 
       {!!hotkeyFailures.length && <div className="upgrade-banner" role="alert">
         <span>{t.settings.hotkeyFailed(hotkeyFailures.join(' / '))}</span>
@@ -1038,9 +1157,10 @@ export function App() {
           partials={partials}
           answersReady={answersReady}
           answersHint={t.health.answersDisabled}
-          pendingText={current ? questionText(current) : ''}
+          pendingText={current && (!rangeStage || rangeRef.current?.startDone) ? questionText(current) : ''}
           pendingCount={questionCount}
           waiting={waiting}
+          rangeRecording={rangeStage === 'recording'}
           questionBusy={questionBusy}
           confirmDisabled={confirmDisabled}
           onConfirm={confirmQuestion}
@@ -1067,7 +1187,7 @@ export function App() {
           visionReady={visionReady}
           answersReady={answersReady}
           answersHint={t.health.answersDisabled}
-          onSwitch={(id) => { waitForFinal(null); setCurrentId(id); }}
+          onSwitch={(id) => { cancelRange(); waitForFinal(null); setCurrentId(id); }}
           onNew={createSession}
           onDelete={deleteSession}
           onRename={renameSession}

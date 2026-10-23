@@ -63,7 +63,8 @@ const vads: Record<Channel, VadSegmenter> = { them: new VadSegmenter(), me: new 
 const routers: Record<Channel, LanguageRouter> = { them: new LanguageRouter(), me: new LanguageRouter() };
 let language: 'auto' | string = 'auto';
 let queue: (PendingSegment | { cut: string })[] = [];
-let cutting: { requestId: string; frames: { pcm: Float32Array; captureTs: number }[]; error?: string; flush?: boolean } | null = null;
+type BufferedInput = { pcm: Float32Array; captureTs: number } | { cut: string };
+let cutting: { requestId: string; frames: BufferedInput[]; error?: string; flush?: boolean } | null = null;
 let cutTimer: ReturnType<typeof setTimeout> | undefined;
 const closingStreams: Record<Channel, Set<Promise<void>>> = { them: new Set(), me: new Set() };
 const partialEpoch: Record<Channel, number> = { them: 0, me: 0 };
@@ -217,24 +218,30 @@ function finishCut(requestId: string): void {
   // exactly the earlier transcript snapshot when it sees this marker.
   post({ type: 'cut', requestId, error: saved.error });
   for (const frame of saved.frames) {
-    if (engine && isStreamingEngine(engine)) handleStreamingPcm(frame.pcm, 'them', frame.captureTs);
-    else handleVadEvents(vads.them.push(frame.pcm, frame.captureTs), 'them');
+    if ('cut' in frame) cutAudio(frame.cut);
+    else acceptPcm(frame.pcm, 'them', frame.captureTs);
   }
   // Capture may stop while pre-cut recognition is still finishing. Flush the
   // replayed continuation too, otherwise its last utterance waits indefinitely.
-  if (saved.flush) {
-    if (engine && isStreamingEngine(engine)) {
-      vads.them.flush();
-      void closeStream('them');
-    } else handleVadEvents(vads.them.flush(true), 'them');
-  }
+  if (saved.flush) flushContinuation();
+}
+
+function flushContinuation(): void {
+  if (cutting) { cutting.flush = true; return; }
+  if (engine && isStreamingEngine(engine)) {
+    vads.them.flush();
+    void closeStream('them');
+  } else handleVadEvents(vads.them.flush(true), 'them');
 }
 
 function cutAudio(requestId: string): void {
-  if (!engine || cutting) {
-    post({ type: 'cut', requestId, error: cutting ? 'Another audio boundary is still pending' : 'ASR is not ready' });
+  if (!engine) {
+    post({ type: 'cut', requestId, error: 'ASR is not ready' });
     return;
   }
+  // Preserve the next boundary in the same ordered stream as buffered PCM.
+  // A quick range-end must not move to the later ASR-completion time.
+  if (cutting) { cutting.frames.push({ cut: requestId }); return; }
   cutting = { requestId, frames: [] };
   cutTimer = setTimeout(() => {
     if (cutting?.requestId !== requestId) return;
@@ -253,6 +260,13 @@ function cutAudio(requestId: string): void {
     queue.push({ cut: requestId });
     void pump();
   }
+}
+
+function acceptPcm(pcm: Float32Array, ch: Channel, captureTs: number): void {
+  if (!engine) return;
+  if (ch === 'them' && cutting) { cutting.frames.push({ pcm, captureTs }); return; }
+  if (isStreamingEngine(engine)) handleStreamingPcm(pcm, ch, captureTs);
+  else handleVadEvents(vads[ch].push(pcm, captureTs), ch);
 }
 
 function handleStreamingPcm(pcm: Float32Array, ch: Channel, captureTs: number): void {
@@ -409,12 +423,7 @@ listen((msg: WorkerInMessage) => {
               (msg.pcm as unknown as ArrayBufferView).buffer ?? (msg.pcm as unknown as ArrayBuffer),
             );
       const ch: Channel = msg.channel === 'me' ? 'me' : 'them';
-      if (ch === 'them' && cutting) {
-        cutting.frames.push({ pcm, captureTs: msg.captureTs });
-        break;
-      }
-      if (isStreamingEngine(engine)) handleStreamingPcm(pcm, ch, msg.captureTs);
-      else handleVadEvents(vads[ch].push(pcm, msg.captureTs), ch);
+      acceptPcm(pcm, ch, msg.captureTs);
       break;
     }
     case 'config':

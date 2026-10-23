@@ -5,6 +5,11 @@ export function questionText(session: StoredSession): string {
   return (session.pendingQuestion ?? []).map((c) => c.text).join('\n');
 }
 
+/** Start a new selected range without deleting the original transcript. */
+export function beginQuestionRange(session: StoredSession): StoredSession {
+  return { ...session, pendingQuestion: [], questionEpoch: (session.questionEpoch ?? 0) + 1 };
+}
+
 export function hasPendingAnswer(session: StoredSession): boolean {
   return session.turns.some((t) => t.status === 'streaming' && !!t.questionBatch);
 }

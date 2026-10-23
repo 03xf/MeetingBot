@@ -38,6 +38,14 @@ describe('rms', () => {
 });
 
 describe('VadSegmenter', () => {
+  it('clears idle pre-roll at an explicit boundary so earlier audio cannot enter a range', () => {
+    const seg = new VadSegmenter();
+    seg.push(new Float32Array(FRAME_LEN).fill(0.001), 100);
+    expect(seg.flush(true)).toEqual([]);
+    seg.push(speechFrame(), 200);
+    const final = seg.flush(true).find(e => e.type === 'segment');
+    expect(final?.type === 'segment' && final.pcm.length).toBe(FRAME_LEN);
+  });
   it('emits speech-start on first energetic frame', () => {
     const seg = new VadSegmenter();
     const events = feed(seg, ['.', '.', 's']);

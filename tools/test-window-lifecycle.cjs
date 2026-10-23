@@ -120,11 +120,14 @@ async function run() {
   menu('隐藏窗口');
   const confirmKey = 'Control+Alt+Enter';
   assert(shortcuts.has(confirmKey));
-  shortcuts.get(confirmKey)();shortcuts.get(confirmKey)(); // repeated callbacks must not cancel or duplicate
+  shortcuts.get(confirmKey)();
+  await until(()=>js('document.body.textContent.includes("等待采集就绪")'),'range requires running capture');
+  assert.equal(requests,0);
+  await js('document.querySelector(".titlebar-actions button:nth-child(2)").click()');
 
   await until(()=>requests>0,'manual confirmation reaches local model');
   await until(()=>js('Array.from(document.querySelectorAll(".turn-head button")).some(b=>b.textContent==="停")'),'stop generation available');
-  assert.equal(requests,1,'repeated answer hotkey submits once');
+  assert.equal(requests,1,'manual confirmation submits once');
   assert.equal(win.getOpacity(),0,'answer shortcut must leave the window hidden');
   menu('显示窗口');
   await js('Array.from(document.querySelectorAll(".turn-head button")).find(b=>b.textContent==="停").click()');
@@ -133,7 +136,7 @@ async function run() {
   const cutHandler=ipcMain.listeners('asr:cut')[0];let heldCut;
   ipcMain.removeListener('asr:cut',cutHandler);
   ipcMain.once('asr:cut',(_event,id)=>{heldCut=id});
-  shortcuts.get(confirmKey)();await until(()=>!!heldCut,'cut waiting');
+  await js('document.querySelector(".titlebar-actions button:nth-child(2)").click()');await until(()=>!!heldCut,'cut waiting');
   await until(()=>js('document.body.textContent.includes("正在整理截断前的问题")'),'waiting indicator');
   const requestCount=requests;await js('document.querySelector(".titlebar-actions button:nth-child(2)").click()');
   await until(()=>js('!document.body.textContent.includes("正在整理截断前的问题")'),'waiting submission cancelled');
@@ -208,7 +211,7 @@ async function run() {
   await until(()=>js('!document.body.textContent.includes("快捷键注册失败")'),'registration error cleared');
   await js('window.mc.setSettings({ui:{hotkeyConfirm:""}})');assert.equal(shortcuts.has('Control+Alt+F9'),false);
   assert.equal(focusEvents,0);assert.equal(win.isFocusable(),false);
-  console.log('[window-lifecycle] hidden answer hotkey, repeated callbacks, rebind, disable and registration failures passed');
+  console.log('[window-lifecycle] manual confirmation, range readiness, rebind, disable and registration failures passed');
   const browseFocusEvents=focusEvents,browseStyleWrites=styleWrites;
   await js('document.querySelector(".interaction-mode").click()');
   await until(()=>js('window.mc.getWindowMode().then(m=>m==="edit")'),'explicit edit');

@@ -46,6 +46,9 @@ jobs:
       - name: Verify window wake, screenshot lifecycle and renderer recovery
         run: npm run smoke:window
 
+      - name: Verify two-press audio range selection
+        run: npm run smoke:range
+
       - name: Build installers
         run: npm run dist:win
 
