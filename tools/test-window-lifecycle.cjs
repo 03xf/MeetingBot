@@ -24,7 +24,7 @@ async function run() {
     for (let n = 0; n < 160; n++) { if (await fn()) return; await pause(40); }
     throw Error('Timed out: ' + label);
   }
-  let win, template, requests = 0, aborted = 0, encodes = 0;
+  let win, template, requests = 0, aborted = 0, encodes = 0, visionRequests = 0;
   let copied;
   clipboard.writeText = text => { copied = text; }; // never replace the user's clipboard
   const shortcuts = new Map();
@@ -40,7 +40,15 @@ async function run() {
   const timer = setTimeout(() => app.exit(1), 165_000);
   await app.whenReady();
   const server = createServer(async (req, res) => {
-    for await (const _part of req) { /* synthetic request body intentionally not logged */ }
+    let raw = ''; for await (const part of req) raw += part;
+    const body = JSON.parse(raw);
+    if (body.model === 'fake-shot') {
+      visionRequests++;
+      assert(body.messages.some(m => Array.isArray(m.content) && m.content.some(c => c.type === 'image_url' && c.image_url.url.startsWith('data:image/png;base64,'))));
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ choices: [{ message: { content: '截图按钮回归通过' } }] }));
+      return;
+    }
     requests++; res.writeHead(200, { 'Content-Type': 'text/event-stream' });
     res.write(': waiting for synthetic cancellation\n\n');
     res.on('close', () => aborted++);
@@ -180,6 +188,38 @@ async function run() {
   assert.equal(await js('window.mc.getWindowMode()'),'browse');assert.equal(focusEvents,0);
   assert.equal(await js('!!document.querySelector("#custom-answer-prompt")'),false);
   console.log('[window-lifecycle] translucent region, cached image and destroy-on-cancel passed');
+  // Click the visible toolbar button via Chromium mouse events. This tests
+  // renderer delivery, not native Windows hit-testing or third-party pages.
+  async function clickScreenshot() {
+    await until(()=>js('!!document.querySelector(".screenshot-action")&&!document.querySelector(".screenshot-action").disabled'),'screenshot button ready');
+    const point = await js('(()=>{const r=document.querySelector(".screenshot-action").getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()');
+    win.webContents.sendInputEvent({ type: 'mouseDown', button: 'left', clickCount: 1, ...point });
+    win.webContents.sendInputEvent({ type: 'mouseUp', button: 'left', clickCount: 1, ...point });
+  }
+  async function screenshotOverlay() {
+    let overlay;
+    await until(async()=>{overlay=BrowserWindow.getAllWindows().find(w=>w.getTitle()==='MeetingBot Region');return overlay&&!overlay.webContents.isLoading()&&await overlay.webContents.executeJavaScript('!!document.querySelector("#cancel")')},'button screenshot overlay');
+    return overlay;
+  }
+  assert.equal(await js('window.mc.getSettings().then(s=>s.llm.answerWithVision)'),false);
+  assert.equal(await js('document.querySelector(".screenshot-action").textContent.includes("截图提问")'),true);
+  await js(`window.mc.setSettings({vision:{baseUrl:${JSON.stringify(url)},model:'fake-shot',apiKey:'fake-shot-only'}})`);
+  await clickScreenshot();const cancelledShot=await screenshotOverlay();
+  await cancelledShot.webContents.executeJavaScript('window.mc.regionCancel()');
+  await until(()=>cancelledShot.isDestroyed(),'button screenshot cancel');assert.equal(visionRequests,0);
+  await clickScreenshot();const selectedShot=await screenshotOverlay();
+  await selectedShot.webContents.executeJavaScript('window.mc.regionRect({x:20,y:20,width:80,height:60})');
+  await until(()=>js('document.body.textContent.includes("截图按钮回归通过")'),'button screenshot answered');
+  assert.equal(visionRequests,1);assert.equal(focusEvents,0);assert.equal(win.isFocusable(),false);
+  assert.equal(await js('window.mc.getSettings().then(s=>s.llm.answerWithVision)'),false);
+  for (const width of [640, 940]) {
+    win.setSize(width,700);await pause(100);
+    assert.equal(await js('Array.from(document.querySelectorAll(".titlebar button")).every(b=>{const r=b.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1})'),true,'toolbar buttons fit the window');
+  }
+  win.webContents.invalidate();await pause(100);
+  fs.writeFileSync(path.join(qa,'screenshot-button.png'),(await win.webContents.capturePage()).toPNG());
+  // The recovery below reloads the renderer with this unconfigured vision slot.
+  await js('window.mc.setSettings({vision:{apiKey:""}})');
   const requestsBeforeRecovery=requests,abortedBeforeRecovery=aborted;
   const retainedSessionName=await js('document.querySelector(".session-picker > button").textContent');
   await js('window.mc.captureStarted(); window.mc.llmAsk({requestId:"window-qa-stream",mode:"free",freeQuestion:"synthetic",recentTranscript:[]});');
@@ -200,6 +240,12 @@ async function run() {
   const faults = fs.readFileSync(path.join(profile, 'window-faults.json'), 'utf8');
   assert(faults.includes('unresponsive')); assert(!faults.includes('fake-window-qa')); assert(!faults.includes('synthetic pending question'));
   console.log('[window-lifecycle] recovery, generation abort, capture reset, saved session and sanitized fault log passed');
+  const beforeMissingShot=encodes;await clickScreenshot();
+  await until(()=>js('document.body.textContent.includes("再点击截图提问")'),'missing vision setup hint');
+  assert.equal(BrowserWindow.getAllWindows().length,1);assert.equal(encodes,beforeMissingShot);assert.equal(visionRequests,1);
+  assert.equal(await js('!!document.querySelector("#custom-answer-prompt")'),false);
+  assert.equal(focusEvents,0);assert.equal(win.isFocusable(),false);
+  console.log('[window-lifecycle] screenshot toolbar button: text mode, cancel, actual vision request, missing-config hint and browse mode passed');
   await js('window.mc.setSettings({ui:{hotkeyConfirm:"occupied"}})');
   assert.deepEqual(await js('window.mc.getHotkeyFailures()'),['occupied']);
   await until(()=>js('document.body.textContent.includes("快捷键注册失败")'),'registration error visible');

@@ -136,3 +136,7 @@ The tray menu also has Start/Stop transcription, New session, Settings, Service 
 4. Tap it again to mark the end. Only this interval forms the current question; answering waits for recognition. Capture stays open for the next round.
 
 Wait while the interval is being finalized or the answer is generating. Stopping capture, switching sessions or clearing transcripts cancels the unsubmitted range. Raw transcripts remain visible, including outside speech, which is excluded from the current question and recent transcript context. Fillers inside the interval are not additionally removed. Outside range mode the existing Cut and answer button still merges pending questions; during a range it becomes End range and answer.
+
+## Screenshot with the mouse (beta.15)
+
+Click **Screenshot & ask** in the top toolbar, drag a region, then receive the vision answer. Right-click or use Cancel to dismiss the selection. It also works in text-only mode without changing subsequent audio answers. Configure the vision model beforehand; missing configuration only shows an inline notice. Enter Edit and Settings yourself to configure it. Existing screenshot hotkeys remain available; blank disables a binding.

@@ -350,8 +350,16 @@ export function App() {
 
   /** region screenshot flow (📷 button or hotkey): drag a region, then ask */
   const doRegionShot = useCallback(async () => {
-    const img = await window.mc.pickRegion();
-    if (img) askShot('', img);
+    const vision = settingsRef.current?.vision;
+    if (!vision?.baseUrl || !vision.model || !vision.apiKeySet) {
+      setWindowNotice(tRef.current.answer.shotSetup);
+      return;
+    }
+    try {
+      setWindowNotice((notice) => notice === tRef.current.answer.shotSetup || notice === tRef.current.answer.shotFailed ? null : notice);
+      const img = await window.mc.pickRegion();
+      if (img) askShot('', img);
+    } catch { setWindowNotice(tRef.current.answer.shotFailed); }
   }, [askShot]);
 
   // ---- boot: load settings + sessions ----
@@ -989,6 +997,14 @@ export function App() {
             title={t.question.hint}
           >
             {waiting ? t.question.cancelWait : rangeStage === 'recording' ? t.question.rangeEnd : t.question.confirm} ({questionCount})
+          </button>
+          <button
+            className="btn screenshot-action"
+            onClick={() => void doRegionShot()}
+            disabled={!settings || !currentId}
+            title={t.answer.shotButtonTitle}
+          >
+            📷 {t.answer.shotButton}
           </button>
           <button
             className={settings?.llm.answerWithVision ? 'btn btn-on' : 'btn'}

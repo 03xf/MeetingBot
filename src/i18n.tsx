@@ -168,6 +168,10 @@ const zh = {
     genWaiting: '生成中…（深度/思考模型会先思考几秒）',
     freePlaceholder: '随便问：基于当前对话向 AI 提问…',
     ask: '问',
+    shotButton: '截图提问',
+    shotButtonTitle: '点击后拖动框选屏幕区域，完成后自动识别并回答',
+    shotSetup: '请先从标题栏进入编辑模式，在设置里配置视觉模型的 Base URL、模型和 API Key，再点击截图提问。',
+    shotFailed: '截图未完成，请重试。',
     shotTitle: '截图框选问视觉模型（拉框选区域，输入框内容作为问题）',
   },
   status: {
@@ -656,6 +660,10 @@ const en: Dict = {
     genWaiting: 'Generating… (thinking models pause a few seconds first)',
     freePlaceholder: 'Ask anything about the current conversation…',
     ask: 'Ask',
+    shotButton: 'Screenshot & ask',
+    shotButtonTitle: 'Click, drag a screen region, then recognize and answer it',
+    shotSetup: 'Enter Edit using the titlebar, configure the vision model Base URL, model and API key in Settings, then try Screenshot & ask.',
+    shotFailed: 'Screenshot did not complete. Please try again.',
     shotTitle: 'Screenshot a region and ask the vision model (input text becomes the question)',
   },
   status: {

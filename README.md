@@ -19,7 +19,7 @@ Live transcription of the other side · first-person teleprompter answers · cap
 
 ## Download
 
-> **v0.2.0-beta.14: select an audio range with two key presses.** Start capture and wait until ready; press your chosen hotkey (such as `Right`) once to mark the start, then again to end and answer only the selected interval. Capture stays running, and existing bindings are retained. Download [beta.14](https://github.com/03xf/MeetingBot/releases/tag/v0.2.0-beta.14) and read the [release notes (中文)](docs/releases/v0.2.0-beta.14.md). Synthetic audio and programmatic UI regressions passed; native input and real platforms remain unverified. Existing knowledge, prompts, Browse locking, screenshots and transparency remain available. Upstream demos below show the older workflow.
+> **v0.2.0-beta.15: a clickable Screenshot & ask button.** Click it in the top toolbar, drag a region and receive a vision answer without pressing a screenshot hotkey. It works independently of text-only mode when a vision model is configured. Download [beta.15](https://github.com/03xf/MeetingBot/releases/tag/v0.2.0-beta.15) and read the [release notes (中文)](docs/releases/v0.2.0-beta.15.md). Audio ranges, knowledge, custom prompts and Browse locking remain available. Programmatic regressions passed; native mouse and real platform behavior still require separate validation.
 
 > **Personal knowledge edition:** This repository extends [JWM0203/MeetingCopilot](https://github.com/JWM0203/MeetingCopilot) with a shared, multi-document personal library, local retrieval, knowledge-first answering and inspectable reference passages. See the [personal knowledge guide (中文)](docs/user/PERSONAL_KNOWLEDGE.zh-CN.md). The Windows downloads below are built from this enhanced edition.
 
