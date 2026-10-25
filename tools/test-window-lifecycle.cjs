@@ -131,7 +131,7 @@ async function run() {
   shortcuts.get(confirmKey)();
   await until(()=>js('document.body.textContent.includes("等待采集就绪")'),'range requires running capture');
   assert.equal(requests,0);
-  await js('document.querySelector(".titlebar-actions button:nth-child(2)").click()');
+  await js('document.querySelector(".question-cut-action").click()');
 
   await until(()=>requests>0,'manual confirmation reaches local model');
   await until(()=>js('Array.from(document.querySelectorAll(".turn-head button")).some(b=>b.textContent==="停")'),'stop generation available');
@@ -144,9 +144,9 @@ async function run() {
   const cutHandler=ipcMain.listeners('asr:cut')[0];let heldCut;
   ipcMain.removeListener('asr:cut',cutHandler);
   ipcMain.once('asr:cut',(_event,id)=>{heldCut=id});
-  await js('document.querySelector(".titlebar-actions button:nth-child(2)").click()');await until(()=>!!heldCut,'cut waiting');
+  await js('document.querySelector(".question-cut-action").click()');await until(()=>!!heldCut,'cut waiting');
   await until(()=>js('document.body.textContent.includes("正在整理截断前的问题")'),'waiting indicator');
-  const requestCount=requests;await js('document.querySelector(".titlebar-actions button:nth-child(2)").click()');
+  const requestCount=requests;await js('document.querySelector(".question-cut-action").click()');
   await until(()=>js('!document.body.textContent.includes("正在整理截断前的问题")'),'waiting submission cancelled');
   win.webContents.send('asr:event',{kind:'cut',requestId:heldCut});
   await pause(100);assert.equal(requests,requestCount,'late finalization must not submit after stop');

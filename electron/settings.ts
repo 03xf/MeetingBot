@@ -18,7 +18,6 @@ import type {
   PublicSettings,
   SettingsFile,
   SettingsPatch,
-  UiLang,
 } from '../shared/protocol';
 import { defaultHotkeysForPlatform } from '../shared/platform';
 import { backgroundOpacity, DEFAULT_BACKGROUND_OPACITY } from '../shared/appearance';
@@ -81,6 +80,7 @@ export function defaultSettings(platform: string = process.platform): SettingsFi
       localRealtime: { model: 'fun-asr-nano' },
     },
     ui: {
+      lang: 'zh',
       stealth: true,
       hotkeyToggle: hotkeys.toggle,
       hotkeyShot: hotkeys.shot,
@@ -204,12 +204,16 @@ export class SettingsStore {
   constructor(
     private readonly filePath: string,
     private readonly cipher: SecretCipher,
-    /** UI language when the user never chose one (derived from OS locale) */
-    private readonly fallbackUiLang: UiLang = 'zh',
   ) {
     const loaded = this.loadFromDisk();
     this.data = loaded.data;
     this.migratedFromV1 = loaded.migrated;
+    // Chinese controls and no own-microphone capture on every launch, including
+    // older profiles. Keep devices, encrypted keys and model configuration.
+    const resetDefaults = this.data.ui.lang !== 'zh' || this.data.llm.answerLang !== 'chinese' || this.data.audio.micEnabled;
+    this.data.ui.lang = 'zh';
+    this.data.llm.answerLang = 'chinese';
+    this.data.audio.micEnabled = false;
     // These two official model IDs were retired on 2026-10-21. Only update
     // the exact official endpoint; relays/custom models and ASR stay intact.
     this.migratedMimoModels = false;
@@ -223,7 +227,7 @@ export class SettingsStore {
       slot.verification = undefined;
       this.migratedMimoModels = true;
     }
-    if (loaded.migrated || this.migratedMimoModels) {
+    if (loaded.migrated || this.migratedMimoModels || resetDefaults) {
       // persist eagerly so the .bak escape hatch exists immediately; a failure
       // here (read-only dir) must never take the app down
       try {
@@ -359,6 +363,9 @@ export class SettingsStore {
       this.data.ui.opacity = backgroundOpacity(this.data.ui.opacity);
     }
     if (patch.audio) Object.assign(this.data.audio, stripUndefined(patch.audio));
+    this.data.ui.lang = 'zh';
+    this.data.llm.answerLang = 'chinese';
+    this.data.audio.micEnabled = false;
     this.save();
   }
 
@@ -463,7 +470,7 @@ export class SettingsStore {
       ui: {
         ...d.ui,
         opacity: backgroundOpacity(d.ui.opacity),
-        lang: d.ui.lang ?? this.fallbackUiLang,
+        lang: 'zh',
         // both are optional on disk (files written before Phase 4 lack them)
         // but always booleans on the wire, so the UI needs no ?? dance
         autoLaunch: !!d.ui.autoLaunch,

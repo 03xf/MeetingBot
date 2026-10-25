@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
-  AnswerLang,
   AsrEvent,
   KbSlot,
   LlmAskPayload,
@@ -141,7 +140,6 @@ export function App() {
   const [hud, setHud] = useState<HudStats>({ count: 0 });
   const [waitingConfirmation, setWaitingConfirmation] = useState<string | null>(null);
   const [mics, setMics] = useState<{ deviceId: string; label: string }[]>([]);
-  const [micActive, setMicActive] = useState(false);
   const [partials, setPartials] = useState<{ them?: string; me?: string }>({});
   const [sessions, setSessions] = useState<StoredSession[]>([]);
   const [currentId, setCurrentId] = useState<string>('');
@@ -149,12 +147,10 @@ export function App() {
 
   const loopbackRef = useRef<LoopbackCapture | null>(null);
   const themInputRef = useRef<MicCapture | null>(null);
-  const micRef = useRef<MicCapture | null>(null);
   const settingsRef = useRef<PublicSettings | null>(null);
   const e2eSamples = useRef<number[]>([]);
   const sessionsRef = useRef<StoredSession[]>([]);
   const currentIdRef = useRef<string>('');
-  const answerLangRef = useRef<AnswerLang>('chinese');
   const loaded = useRef(false);
   const partialsRef = useRef<{ them?: string; me?: string }>({});
   const waitingRef = useRef<string | null>(null);
@@ -162,14 +158,13 @@ export function App() {
   const rangeRef = useRef<QuestionRange | null>(null);
   const submitQuestionRef = useRef<(rangeOnly?: boolean) => void>(() => {});
 
-  // UI language: settings-driven; ref mirror so stable callbacks stay fresh
-  const t = getDict(settings?.ui.lang);
+  // The interface and default answer language are fixed to Chinese.
+  const t = getDict('zh');
   const tRef = useRef<Dict>(t);
   tRef.current = t;
 
   if (!loopbackRef.current) loopbackRef.current = new LoopbackCapture();
   if (!themInputRef.current) themInputRef.current = new MicCapture();
-  if (!micRef.current) micRef.current = new MicCapture();
   settingsRef.current = settings;
   currentIdRef.current = currentId;
 
@@ -316,7 +311,7 @@ export function App() {
         question: mode === 'free' ? undefined : question,
         freeQuestion: mode === 'free' ? text : undefined,
         recentTranscript: rangeOnly ? (session.pendingQuestion ?? []).map((c) => c.text) : segs.slice(-30).map((s) => s.text),
-        answerLang: answerLangRef.current,
+        answerLang: 'chinese',
         history: mode === 'translate' ? undefined : buildHistory(),
         ...material,
       };
@@ -366,7 +361,6 @@ export function App() {
   useEffect(() => {
     void window.mc.getSettings().then((s) => {
       setSettings(s);
-      answerLangRef.current = s.llm.answerLang;
     });
     void window.mc.loadSessions().then((f) => {
       if (f.sessions.length) {
@@ -618,23 +612,6 @@ export function App() {
     setCapturing(false);
   }, [cancelRange]);
 
-  // 🎤 独立麦克风采集：只转麦克风(我)，与系统声音互不影响，按钮直接控制起停
-  const toggleMicCapture = useCallback(async () => {
-    const mic = micRef.current!;
-    if (mic.running) {
-      await mic.stop();
-      setMicActive(false);
-      return;
-    }
-    try {
-      await mic.start(settings?.audio.micDeviceId, (buf, ts) => window.mc.sendPcm(buf, ts, 'me'));
-      setMicActive(true);
-      if (mics.length === 0) void listMics().then(setMics);
-    } catch (e) {
-      setAsr((s) => ({ ...s, lastError: tRef.current.app.micStartFail((e as Error).message) }));
-    }
-  }, [settings, mics]);
-
   const setSeg = useCallback(
     (segId: number, patch: Partial<TranscriptSegment>) => {
       const sid = currentIdRef.current;
@@ -667,37 +644,11 @@ export function App() {
     setSettings({ ...settings, ui: { ...settings.ui, stealth: on } });
   }, [settings]);
 
-  const toggleAnswerLang = useCallback(async () => {
-    if (!settings) return;
-    const next: AnswerLang = settings.llm.answerLang === 'chinese' ? 'english' : 'chinese';
-    answerLangRef.current = next;
-    const updated = await window.mc.setSettings({ llm: { answerLang: next } });
-    setSettings(updated);
-    answerLangRef.current = updated.llm.answerLang;
-    prewarm(false); // lang is part of the stable prefix → mark dirty / reheat
-  }, [settings, prewarm]);
-
   const toggleAnswerModel = useCallback(async () => {
     if (!settings) return;
     const updated = await window.mc.setSettings({ llm: { answerWithVision: !settings.llm.answerWithVision } });
     setSettings(updated);
   }, [settings]);
-
-  const selectMic = useCallback(
-    async (deviceId: string) => {
-      const updated = await window.mc.setSettings({ audio: { micDeviceId: deviceId || undefined } });
-      setSettings(updated);
-      // if the mic is currently on, restart it on the newly chosen device
-      const mic = micRef.current!;
-      if (mic.running) {
-        await mic.stop();
-        await mic
-          .start(deviceId || undefined, (buf, ts) => window.mc.sendPcm(buf, ts, 'me'))
-          .catch(() => setMicActive(false));
-      }
-    },
-    [],
-  );
 
   const selectThemInput = useCallback(async (deviceId: string) => {
     const updated = await window.mc.setSettings({ audio: { themDeviceId: deviceId || undefined } });
@@ -951,9 +902,12 @@ export function App() {
   }, [answersReady, waitForFinal, toggleQuestionRange, cancelRange]);
 
   useEffect(() => window.mc.onConfirmHotkey(toggleQuestionRange), [toggleQuestionRange]);
+  const rangeButtonDisabled = rangeStage === 'recording' ? false :
+    !capturing || captureStarting || asr.phase !== 'ready' || !answersReady || questionBusy ||
+    !!rangeRef.current || !!cutRef.current || !!waitingRef.current;
 
   return (
-    <I18nProvider lang={settings?.ui.lang}>
+    <I18nProvider lang="zh">
     <div className="app">
       <header className="titlebar">
         <span className="brand">MeetingBot</span>
@@ -991,7 +945,16 @@ export function App() {
             </select>
           )}
           <button
-            className="btn btn-primary"
+            className={rangeStage === 'recording' ? 'btn btn-live range-action' : 'btn range-action'}
+            onClick={toggleQuestionRange}
+            disabled={rangeButtonDisabled}
+            title={t.question.rangeButtonHint}
+            aria-pressed={rangeStage === 'recording'}
+          >
+            {rangeStage === 'recording' ? t.question.rangeEnd : rangeStage === 'finishing' ? t.question.rangeProcessing : t.question.rangeStart}
+          </button>
+          <button
+            className="btn btn-primary question-cut-action"
             onClick={confirmQuestion}
             disabled={!waiting && confirmDisabled}
             title={t.question.hint}
@@ -1013,32 +976,6 @@ export function App() {
           >
             {settings?.llm.answerWithVision ? t.titlebar.vision : t.titlebar.textOnly}
           </button>
-          <button className="btn" onClick={() => void toggleAnswerLang()} title={t.titlebar.answerLangTitle}>
-            {t.titlebar.answerLang(settings?.llm.answerLang === 'english')}
-          </button>
-          <button
-            className={micActive ? 'btn btn-live' : 'btn'}
-            onClick={() => void toggleMicCapture()}
-            title={t.titlebar.micTitle}
-          >
-            {micActive ? t.titlebar.micOn : t.titlebar.micOff}
-          </button>
-          {micActive && mics.length > 0 && (
-            <select
-              className="mic-select"
-              disabled={windowMode === 'browse'}
-              value={settings?.audio.micDeviceId ?? ''}
-              onChange={(e) => void selectMic(e.target.value)}
-              title={t.titlebar.micDeviceTitle}
-            >
-              <option value="">{t.titlebar.micDefault}</option>
-              {mics.map((m) => (
-                <option key={m.deviceId} value={m.deviceId}>
-                  {(m.label || t.titlebar.micDefault).slice(0, 10)}
-                </option>
-              ))}
-            </select>
-          )}
           <button
             className={settings?.ui.stealth ? 'btn btn-on' : 'btn'}
             onClick={() => void toggleStealth()}
@@ -1076,7 +1013,7 @@ export function App() {
         </div>
       </header>
 
-      {(rangeStage || (capturing && settings?.ui.hotkeyConfirm)) && <div className="upgrade-banner" role="status" data-range-stage={rangeStage ?? 'ready'}>
+      {(rangeStage || capturing) && <div className="upgrade-banner" role="status" data-range-stage={rangeStage ?? 'ready'}>
         <span>{rangeStage === 'recording' ? t.question.rangeRecording(settings?.ui.hotkeyConfirm ?? '') : rangeStage === 'finishing' ? t.question.rangeFinalizing : t.question.rangeReady(settings?.ui.hotkeyConfirm ?? '')}</span>
       </div>}
 
@@ -1145,7 +1082,6 @@ export function App() {
           onOpacityPreview={setOpacityPreview}
           onSaved={(s) => {
             setSettings(s);
-            answerLangRef.current = s.llm.answerLang;
             setShowSettings(false);
             void finishEdit();
           }}

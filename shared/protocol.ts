@@ -230,7 +230,7 @@ export interface SettingsFile {
     /** answer-body font size (small=13px / medium=16px / large=19px) */
     fontScale: FontScale;
     theme: ThemeMode;
-    /** UI display language; absent = follow OS locale (zh → zh, else en) */
+    /** Legacy field retained for compatibility; the app interface is fixed to zh. */
     lang?: UiLang;
     /** start MeetingCopilot with the OS session; DEFAULT OFF, user opt-in only */
     autoLaunch?: boolean;
@@ -240,7 +240,7 @@ export interface SettingsFile {
   audio: {
     /** input used for the other-party channel on platforms without loopback */
     themDeviceId?: string;
-    /** also capture the microphone (dual-channel transcription: 对方 + 我) */
+    /** Legacy preference; current builds disable own-microphone capture. */
     micEnabled: boolean;
     /** chosen mic device id ('' / undefined = system default) */
     micDeviceId?: string;

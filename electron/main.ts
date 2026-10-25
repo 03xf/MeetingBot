@@ -130,7 +130,7 @@ function bootstrap(): void {
   let settings: SettingsStore;
   let knowledge: KnowledgeStore;
   let sessionStore: SessionStore;
-  let osLang: UiLang = 'zh';
+  const osLang: UiLang = 'zh';
   /** set by before-quit so window handlers stop prompting mid-shutdown */
   let quitting = false;
   /** an ASR-affecting settings patch arrived while the wizard owned the flow */
@@ -576,9 +576,8 @@ function bootstrap(): void {
   }
 
   app.whenReady().then(() => {
-    // users who never chose a UI language get their OS language (zh → zh, else en)
-    osLang = app.getLocale().toLowerCase().startsWith('zh') ? 'zh' : 'en';
-    settings = new SettingsStore(join(app.getPath('userData'), 'settings.json'), cipher(), osLang);
+    // The interface is Chinese on every OS locale.
+    settings = new SettingsStore(join(app.getPath('userData'), 'settings.json'), cipher());
     if (settings.migratedMimoModels) recoveryNotice = settings.data.ui.lang === 'en'
       ? 'Retired MiMo models were upgraded to V2.6. Your key is retained; please test the connection again in Settings. Pricing follows the new model.'
       : 'MiMo 已下线的模型已更新为 V2.6，原 Key 保留。请在设置中重新测试连接；费用按新模型计费。';

@@ -61,9 +61,10 @@ async function run() {
   const port=server.address().port;
   const apiKeyEnc=safeStorage.isEncryptionAvailable()?safeStorage.encryptString('fake-range-only').toString('base64'):'plain:'+Buffer.from('fake-range-only').toString('base64');
   fs.writeFileSync(path.join(profile,'settings.json'),JSON.stringify({version:2,onboarding:{schemaVersion:1,completed:true},
-    llm:{baseUrl:`http://127.0.0.1:${port}/v1`,model:'fake',apiKeyEnc},
+    llm:{baseUrl:`http://127.0.0.1:${port}/v1`,model:'fake',apiKeyEnc,answerLang:'english'},
     asr:{backend:'cloud-realtime',realtime:{baseUrl:`ws://127.0.0.1:${port}/asr`,model:'fake',apiKeyEnc}},
-    ui:{lang:'zh',theme:'dark',stealth:false,hotkeyToggle:'',hotkeyShot:'',hotkeyConfirm:'Right'}}));
+    audio:{micEnabled:true},
+    ui:{lang:'en',theme:'dark',stealth:false,hotkeyToggle:'',hotkeyShot:'',hotkeyConfirm:'Right'}}));
   fs.writeFileSync(path.join(profile,'sessions.json'),JSON.stringify({currentId:'range',sessions:[{id:'range',name:'Range QA',titled:true,createdAt:1,questionQueueVersion:1,
     segments:[{id:1,speaker:'them',text:'起点前的旧字幕',startTs:1,endTs:2}],pendingQuestion:[{id:'old',segmentId:1,text:'起点前的旧字幕'}],turns:[]}]}));
   require('../out/main/index.js');
@@ -73,22 +74,33 @@ async function run() {
   await until(()=>keys.has('Right'),'custom Right binding');
   const cuts=[];ipcMain.on('asr:cut',(_event,id)=>cuts.push(id));
   const hit=()=>keys.get('Right')();
-  const menu=label=>{const item=template.find(i=>i.label===label);assert(item?.click);item.click()};
+  const button=()=>js('document.querySelector(".range-action").click()');
+  assert.equal(await js('document.querySelector(".range-action")?.textContent'),'开始截取');
+  assert.equal(await js('document.querySelector(".range-action").disabled'),true);
+  assert.equal(await js('Array.from(document.querySelectorAll(".titlebar-actions button")).some(b=>b.title.includes("AI 回答语言"))'),false);
+  assert.equal(await js('window.mc.getSettings().then(s=>s.ui.lang==="zh"&&s.llm.answerLang==="chinese"&&!s.audio.micEnabled)'),true);
+  assert.equal(await js('document.querySelector(".titlebar-actions").textContent.includes("麦克风")'),false);
+  const menu=label=>{const item=template.find(i=>i.label===label);assert(item?.click,'Missing '+label+' in '+template.map(i=>i.label).join(' / '));item.click()};
   const send=async(value,count=4)=>js(`(()=>{for(let i=0;i<${count};i++)window.mc.sendPcm(new Float32Array(1600).fill(${value}).buffer,Date.now(),'them')})()`);
   hit();await until(()=>js('document.body.textContent.includes("等待采集就绪")'),'start capture notice');
   assert.equal(cuts.length,0);
   // Override only this isolated renderer's capture source. The real capture
   // implementation and worklet still create / flush every ordered marker.
-  await js(`window.__captureRequests=0;navigator.mediaDevices.getDisplayMedia=async()=>{window.__captureRequests++;window.__silentContext=new AudioContext({sampleRate:16000});await window.__silentContext.resume();return window.__silentContext.createMediaStreamDestination().stream};void 0`);
+  await js(`window.__captureRequests=0;window.__ownMicRequests=0;navigator.mediaDevices.getUserMedia=async()=>{window.__ownMicRequests++;throw Error('own mic must stay off')};navigator.mediaDevices.getDisplayMedia=async()=>{window.__captureRequests++;window.__silentContext=new AudioContext({sampleRate:16000});await window.__silentContext.resume();return window.__silentContext.createMediaStreamDestination().stream};void 0`);
   await js('window.__mcAutoStart()');
   await until(()=>js('document.querySelector("[data-range-stage=ready]")!==null'),'capture ready');
   assert.equal(await js('document.body.textContent.includes("等待采集就绪")'),false);
   assert.equal(await js('window.__captureRequests'),1);
+  assert.equal(await js('document.querySelector(".range-action").disabled'),false);
   await send(0.1);await until(()=>streams[0]?.length>0,'prefix audio');
-  menu('隐藏窗口');hit();
+  await until(()=>template.some(i=>i.label==='隐藏窗口'),'initial inactive window shown');
+  if(process.env.MC_RANGE_PREVIEW==='1')fs.writeFileSync(path.join(qa,'range-button-preview.png'),(await win.webContents.capturePage()).toPNG());
+  menu('隐藏窗口');await button();
   await until(()=>cuts.length===1&&!!releasePrefix,'start boundary issued');
-  await send(0.2,2);hit();await until(()=>cuts.length===2,'end boundary issued while prefix ASR pending');
-  await send(0.3);hit(); // a third press while finishing must not start another range
+  assert.equal(await js('document.querySelector(".range-action").getAttribute("aria-pressed")'),'true');
+  await send(0.2,2);await button();await until(()=>cuts.length===2,'end boundary issued while prefix ASR pending');
+  assert.equal(await js('document.querySelector(".range-action").disabled'),true);
+  await send(0.3);hit();await button(); // finishing ignores both a third key press and a disabled click
   assert.equal(answers.length,0);assert.equal(cuts.length,2);
   releasePrefix();
   await until(()=>answers.length===1,'selected question submitted');
@@ -98,23 +110,24 @@ async function run() {
   assert(!JSON.stringify(answers[0].messages).includes('终点后'));
   assert.equal(win.getOpacity(),0);assert.equal(win.isFocusable(),false);assert.equal(focus,0);
   await until(()=>streams.some(a=>a[0]===9830),'post-range audio continues');
-  hit();await until(()=>cuts.length===3,'next range start');await send(0.4,2);hit();
+  await button();await until(()=>cuts.length===3,'next range start');await send(0.4,2);hit();
   await until(()=>cuts.length===4,'next range end');
   await until(()=>answers.length===2,'next range submitted');
   assert(JSON.stringify(answers[1].messages).includes('下一轮区间问题'));
   assert(!JSON.stringify(answers[1].messages).includes('终点后'));
   await until(()=>js('!Array.from(document.querySelectorAll(".turn-head button")).some(b=>b.textContent==="停")'),'second answer complete');
-  hit();await until(()=>cuts.length===5,'empty start');hit();
+  hit();await until(()=>cuts.length===5,'empty start');await button();
   await until(()=>cuts.length===6,'empty end');
   await until(()=>js('document.body.textContent.includes("所选区间没有识别到可用的问题")'),'empty range notice');
   assert.equal(answers.length,2);
-  hit();await until(()=>cuts.length===7,'session-switch range start');await send(0.5);
+  await js('window.mc.setSettings({ui:{hotkeyConfirm:""}})');assert.equal(keys.has('Right'),false);
+  await button();await until(()=>cuts.length===7,'session-switch range start with hotkey disabled');await send(0.5);
   menu('新建会话');
   await until(()=>cuts.length===8,'session switch seals the cancelled range');
   await until(()=>js('window.mc.loadSessions().then(f=>f.sessions.some(s=>s.id==="range"&&s.segments.some(x=>x.text==="切换会话时的区间")))'),'cancelled transcript stays in its original session');
   assert.equal(await js('window.mc.loadSessions().then(f=>f.sessions.filter(s=>s.id!=="range").some(s=>s.segments.some(x=>x.text==="切换会话时的区间")))'),false);
   assert.equal(answers.length,2);
-  hit();await until(()=>cuts.length===9,'stop-cancel range start');await send(0.6);
+  await button();await until(()=>cuts.length===9,'stop-cancel range start');await send(0.6);
   await js('document.querySelector(".titlebar-actions button:first-child").click()');
   await until(()=>cuts.length===10,'stop seals cancelled range');
   await until(()=>js('!document.querySelector("[data-range-stage]")'),'capture stopped');
@@ -122,13 +135,14 @@ async function run() {
   assert.equal(await js('window.__captureRequests'),1,'marking ranges must not restart the device');
   await js('window.__mcAutoStart()');
   await until(()=>js('!!document.querySelector("[data-range-stage=ready]")'),'restart capture explicitly');
-  hit();await until(()=>cuts.length===11,'error range start');await send(0.7);hit();
+  await button();await until(()=>cuts.length===11,'error range start');await send(0.7);await button();
   await until(()=>cuts.length===12,'error range end');
   await until(()=>js(`!!document.querySelector('[title*="问题截断未完成"]')`),'ASR failure surfaced inline');
   await pause(100);assert.equal(answers.length,2,'ASR failure must not answer an incomplete selection');
   for(const audio of streams)assert(audio.length&&audio.every(v=>v===audio[0]),'no stream may mix PCM from different regions');
   assert.equal(focus,0);assert.equal(win.isFocusable(),false);
+  assert.equal(await js('window.__ownMicRequests'),0,'starting capture and selecting ranges must never request the own-mic channel');
   fs.writeFileSync(path.join(qa,'result.json'),JSON.stringify({passed:true,modelRequests:answers.length,captureStarts:2,focusEvents:focus,nativeInput:'not tested'},null,2));
-  console.log('[audio-range] actual worklet and worker: exact selected question, delayed ASR, repeated rounds, empty range, session/stop cancellation, ASR failure and no device restart between ranges or window activation');
+  console.log('[audio-range] button/button and mixed hotkey ranges; disabled-hotkey button operation; exact PCM boundaries; Chinese old-profile reset; zero own-mic requests; cancellation, errors and no window activation');
   clearTimeout(timer);for(const ws of wsServer.clients)ws.terminate();await new Promise(r=>wsServer.close(r));server.closeAllConnections();await new Promise(r=>server.close(r));app.quit();
 }

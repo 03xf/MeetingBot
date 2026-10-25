@@ -41,7 +41,7 @@ Explains bring-your-own-key, what an API key is, and where your data goes:
 - with a cloud LLM, the transcript and the material you import go to the LLM provider you chose;
 - with local speech recognition, audio never leaves the machine.
 
-The toggle in the top-right switches **中文 / English**, and that choice becomes the app's UI language.
+Current builds use a Chinese interface and default answer instructions. The language switch is removed.
 
 ### 2️⃣ Pick a plan
 
@@ -69,7 +69,7 @@ On failure the card shows an error code and the single next action worth taking,
 ### 4️⃣ Connection test
 
 - **Computer audio**: play anything with sound, click "Start test" and watch the level meter move. If it stays flat, the card lists what to check.
-- **Microphone (optional)**: transcribes your own voice on a separate channel. Use headphones so the speakers do not echo back.
+- **Meeting/system audio only**: your own microphone is not opened; microphone controls are removed.
 - **Checklist**: which keys are saved, whether audio works, and the latest connection-test verdicts. Anything still "Not saved" or "No sound" blocks "Next"; merely untested does not.
 
 ### 5️⃣ Done
@@ -94,9 +94,7 @@ Other title-bar controls:
 
 | Button | What it does |
 |---|---|
-| `A:ZH` / `A:EN` | Language the AI answers in |
 | `Text` / `Vision` | Answer with the text LLM, or with the vision model (screenshot Q&A) |
-| `🎤Mic` | Transcribe your own voice separately |
 | `Capture protection` | Controls recording capture protection; does not certify focus preservation or platform detection results |
 | `Browse mode` / `Edit mode` | Browse is non-focusable; explicit editing allows activation |
 | `—` | Hide the window; the hotkey or the tray icon brings it back |
@@ -128,14 +126,13 @@ The tray menu also has Start/Stop transcription, New session, Settings, Service 
 2. Read [TROUBLESHOOTING.en.md](TROUBLESHOOTING.en.md) for the full error-code table.
 3. Still stuck: Settings → Advanced → Diagnostics, copy the report (it has no keys, resume text or transcripts) and open an issue at [GitHub Issues](https://github.com/03xf/MeetingBot/issues).
 
-## Two-press audio range selection (beta.14)
+## Button or hotkey audio range selection (beta.16)
 
-1. Enter Edit and configure Start range / end and answer in Settings, for example `Right`. Existing bindings are retained; blank disables it. Saving restores Browse.
-2. Click Start and wait for Capture ready.
-3. Tap the hotkey once to mark the start. The app shows Recording selected range.
-4. Tap it again to mark the end. Only this interval forms the current question; answering waits for recognition. Capture stays open for the next round.
+1. Click “开始” (Start) and wait for capture to be ready.
+2. Click “开始截取” (Start range), then “结束截取并回答” (End range and answer). Only the selected audio becomes the question; capture continues.
+3. Optionally bind Right or another hotkey in Settings. Buttons and the hotkey share one range and can be mixed. A blank hotkey does not disable the button.
 
-Wait while the interval is being finalized or the answer is generating. Stopping capture, switching sessions or clearing transcripts cancels the unsubmitted range. Raw transcripts remain visible, including outside speech, which is excluded from the current question and recent transcript context. Fillers inside the interval are not additionally removed. Outside range mode the existing Cut and answer button still merges pending questions; during a range it becomes End range and answer.
+Duplicate operations are ignored while processing. Stop, switch session or clear transcripts to cancel an unsubmitted range. Raw captions remain; outside speech does not enter the selected question. The existing Cut and answer control still merges all pending speech when no range is active.
 
 ## Screenshot with the mouse (beta.15)
 

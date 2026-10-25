@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import type {
-  AnswerLang,
   AsrLanguage,
   FontScale,
   ProviderSlot,
@@ -8,7 +7,6 @@ import type {
   ProviderVerification,
   PublicSettings,
   ThemeMode,
-  UiLang,
 } from '../../shared/protocol';
 import {
   LOCAL_REALTIME_MODELS,
@@ -137,7 +135,6 @@ export function SettingsPanel({
   const t = useT();
   const [baseUrl, setBaseUrl] = useState(settings.llm.baseUrl);
   const [model, setModel] = useState(settings.llm.model);
-  const [answerLang, setAnswerLang] = useState<AnswerLang>(settings.llm.answerLang);
   const [customPrompt, setCustomPrompt] = useState(settings.llm.customPrompt ?? '');
   const [language, setLanguage] = useState<AsrLanguage>(settings.asr.language);
   const [hotkey, setHotkey] = useState(settings.ui.hotkeyToggle);
@@ -158,9 +155,7 @@ export function SettingsPanel({
   const [fontScale, setFontScale] = useState<FontScale>(settings.ui.fontScale ?? 'medium');
   const [theme, setTheme] = useState<ThemeMode>(settings.ui.theme ?? 'dark');
   const [opacity, setOpacity] = useState(() => backgroundOpacity(settings.ui.opacity));
-  const [uiLang, setUiLang] = useState<UiLang>(settings.ui.lang);
   const [themDeviceId, setThemDeviceId] = useState(settings.audio.themDeviceId ?? '');
-  const [micDeviceId, setMicDeviceId] = useState(settings.audio.micDeviceId ?? '');
   const [devices, setDevices] = useState<{ deviceId: string; label: string }[]>([]);
   const [saving, setSaving] = useState(false);
   /** weak-crypto confirmation is pending; nothing has been sent to main yet */
@@ -265,7 +260,7 @@ export function SettingsPanel({
         llm: {
           baseUrl: baseUrl.trim(),
           model: model.trim(),
-          answerLang,
+          answerLang: 'chinese',
           customPrompt,
           providerId: providerIdForEndpoint(baseUrl.trim(), model.trim(), 'text-llm'),
           ...(llmApiKey !== undefined ? { apiKey: llmApiKey } : {}),
@@ -317,12 +312,12 @@ export function SettingsPanel({
           fontScale,
           theme,
           opacity,
-          lang: uiLang,
+          lang: 'zh',
           autoLaunch,
         },
         audio: {
           themDeviceId: themDeviceId || undefined,
-          micDeviceId: micDeviceId || undefined,
+          micEnabled: false,
         },
       });
       llmKey.reset();
@@ -611,13 +606,6 @@ export function SettingsPanel({
         })}
       </div>
       {keyRow(t.settings.apiKey, llmKey, 'llm', llmTarget())}
-      <div className="settings-row">
-        <label>{t.settings.answerLangLabel}</label>
-        <select value={answerLang} onChange={(e) => setAnswerLang(e.target.value as AnswerLang)}>
-          <option value="chinese">{t.settings.answerLangZh}</option>
-          <option value="english">{t.settings.answerLangEn}</option>
-        </select>
-      </div>
 
       <div className="settings-row">
         <label htmlFor="custom-answer-prompt">{t.settings.customPromptLabel}</label>
@@ -632,13 +620,6 @@ export function SettingsPanel({
       </div>
       <div className="settings-hint">{t.settings.customPromptHint}</div>
 
-      <div className="settings-row">
-        <label>{t.settings.uiLang}</label>
-        <select value={uiLang} onChange={(e) => setUiLang(e.target.value as UiLang)}>
-          <option value="zh">中文</option>
-          <option value="en">English</option>
-        </select>
-      </div>
       <div className="settings-row">
         <label>{t.settings.theme}</label>
         <select value={theme} onChange={(e) => setTheme(e.target.value as ThemeMode)}>
@@ -707,12 +688,6 @@ export function SettingsPanel({
       <div className="settings-row">
         <label>{t.settings.themDevice}</label>
         <select value={themDeviceId} onChange={(e) => setThemDeviceId(e.target.value)}>
-          {deviceOptions}
-        </select>
-      </div>
-      <div className="settings-row">
-        <label>{t.settings.micDevice}</label>
-        <select value={micDeviceId} onChange={(e) => setMicDeviceId(e.target.value)}>
           {deviceOptions}
         </select>
       </div>

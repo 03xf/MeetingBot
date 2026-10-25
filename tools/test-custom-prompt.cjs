@@ -116,6 +116,8 @@ async function run() {
     }
     await js('window.__mcOpenSettings()');
     await until(() => js('!!document.querySelector("#custom-answer-prompt")'), 'prompt editor');
+    assert.equal(await js('Array.from(document.querySelectorAll(".settings-row label")).some(e=>/界面语言|AI 回答语言|麦克风设备/.test(e.textContent))'),false,'removed language / own-mic controls must not remain in Settings');
+    assert.equal(await js('!!document.querySelector(".settings-row option[value=en]")'),false);
   }
   async function save(value) {
     await open();

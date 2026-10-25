@@ -19,7 +19,7 @@ Live transcription of the other side · first-person teleprompter answers · cap
 
 ## Download
 
-> **v0.2.0-beta.15: a clickable Screenshot & ask button.** Click it in the top toolbar, drag a region and receive a vision answer without pressing a screenshot hotkey. It works independently of text-only mode when a vision model is configured. Download [beta.15](https://github.com/03xf/MeetingBot/releases/tag/v0.2.0-beta.15) and read the [release notes (中文)](docs/releases/v0.2.0-beta.15.md). Audio ranges, knowledge, custom prompts and Browse locking remain available. Programmatic regressions passed; native mouse and real platform behavior still require separate validation.
+> **v0.2.0-beta.16: click to select an audio range.** Click Start range, then End and answer, or mix the button with your configured hotkey. The interface/default answers are Chinese; language and own-microphone controls are removed. Only meeting/system audio is captured. Download [beta.16](https://github.com/03xf/MeetingBot/releases/tag/v0.2.0-beta.16); see [release notes](docs/releases/v0.2.0-beta.16.md).
 
 > **Personal knowledge edition:** This repository extends [JWM0203/MeetingCopilot](https://github.com/JWM0203/MeetingCopilot) with a shared, multi-document personal library, local retrieval, knowledge-first answering and inspectable reference passages. See the [personal knowledge guide (中文)](docs/user/PERSONAL_KNOWLEDGE.zh-CN.md). The Windows downloads below are built from this enhanced edition.
 
@@ -57,10 +57,10 @@ Live transcription of the other side · first-person teleprompter answers · cap
 
 The first launch opens a setup wizard — a normal, screen-shareable window, so someone can walk you through it remotely. Five steps:
 
-1. **Welcome** — what bring-your-own-key means, what an API key is, and exactly what leaves your machine. Pick 中文 / English here; that becomes the app's language.
+1. **Welcome** — what bring-your-own-key means, what an API key is, and exactly what leaves your machine. Current builds use Chinese.
 2. **Plan** — *Low latency* (Alibaba Cloud realtime ASR + DeepSeek answers, 2 keys), *Minimal* (MiMo for both, 1 key, Beta), *Transcription only* (1 key), or *Advanced / local* (change nothing, configure it yourself).
 3. **Services** — the provider tutorial is inline: open the key page, paste, "Save and test connection". Keys are encrypted with the OS credential store before they touch disk.
-4. **Connection test** — a live level meter proves the app can hear your computer, plus the optional microphone channel and a checklist of what is still missing.
+4. **Connection test** — a live level meter proves the app can hear your computer, with the own-microphone channel disabled and a checklist of what is still missing.
 5. **Done** — the whole plan is written as one settings update and the main window opens.
 
 ![Setup wizard, step 2: choosing a plan](docs/setup-wizard-en.png)
@@ -81,10 +81,10 @@ You can reopen the wizard any time from *⚙ Settings → Run the setup wizard a
 
 - 📝 **Formatted answers and code blocks** — headings, emphasis, lists and tables render normally; code keeps its indentation with syntax highlighting, line numbers, copy buttons and horizontal scrolling. Works with streamed output and stored answers.
 
-- 🎧 **Hears the other side directly — no meeting bot.** Windows captures system loopback audio. macOS uses a selectable audio input (choose a virtual device such as BlackHole for meeting/system audio). An independent microphone channel transcribes your own voice separately.
+- 🎧 **Meeting/system audio only.** Windows uses system loopback; macOS uses the selected virtual meeting-audio input. The own-microphone channel is disabled.
 - ⚡ **Four switchable ASR backend families** — local sidecars (FunASR by default; experimental MOSS-Transcribe 0.9B), local Whisper turbo (offline fallback, DirectML GPU), Alibaba Cloud `fun-asr-realtime`, and MiMo per-segment. FunASR provides live partials; MOSS emits a finalized utterance after a pause.
-- 🌍 **Bilingual (zh / en) out of the box** — the ASR detects Chinese↔English switches automatically mid-meeting, with no settings to touch; one click on the answer-language toggle (`A:EN`) and the teleprompter output flips to English too. Built for English interviews and code-switching conversations.
-- 🌐 **Fully English or Chinese interface** — every label, tooltip, dialog and status message is available in both languages. Switch under *Settings → Appearance → UI Language*; first launch follows your OS language automatically. UI language and answer language are independent, so you can run an English UI while reading Chinese answers, or vice versa.
+- 🌍 **Mixed Chinese/English recognition.** ASR still accepts mixed speech. The interface and default answer instructions are Chinese.
+- 🖱️ **Clickable audio ranges.** Start capture, click Start range, then End and answer. The button and configured hotkey share the same range.
 - 🧠 **First-person teleprompter answers** — bring your own key, any OpenAI-compatible LLM (DeepSeek recommended). Answers are written to be read aloud verbatim: conclusion first, then 2-3 short points; STAR for behavioral questions; idea → key points → complexity for technical ones. Never invents experience beyond your resume.
 - 📄 **Per-session resume + JD slots** — import `.md/.txt/.docx/.pdf`; parsing is local and deterministic, nothing gets uploaded. Question-type detection (behavioral / technical / smalltalk) appends a zero-latency answering hint.
 - 🔁 **Rolling interview memo** — a structured summary (questions asked / facts you claimed / interviewer focus) updates asynchronously after each answer, so a 60-minute interview stays self-consistent while per-request tokens stay flat.
@@ -99,17 +99,15 @@ You can reopen the wizard any time from *⚙ Settings → Run the setup wizard a
 |---|---|
 | ![dark theme, English UI](docs/main-dark-en.png) | ![light theme, English UI](docs/main-light-en.png) |
 
-### One click between the English and Chinese UI
+### Current interface
 
-![Switching the UI language from Chinese to English](docs/language-switch.gif)
-
-*Settings → Appearance → UI Language: the whole interface — title bar, panels, tooltips, dialogs — flips instantly. The screenshots above show the English UI; the Chinese one is in [README.zh-CN.md](README.zh-CN.md).*
+Current builds use Chinese and remove language / own-microphone controls. Some historical screenshots and demos below show earlier versions.
 
 ### Bilingual in one session
 
 ![Bilingual demo: automatic zh/en switching](docs/demo-bilingual.gif)
 
-*A Chinese question, then an English one — same session, nothing reconfigured. The local ASR picks up the language switch automatically (both at ~1.6 s), and after one click on `答:EN` the answer streams out in English, still grounded in the same resume.*
+*Historical demo: a Chinese question, then an English one — same session, nothing reconfigured. The local ASR picks up the language switch automatically (both at ~1.6 s), and after one click on `答:EN` the answer streams out in English, still grounded in the same resume.*
 
 ![bilingual answer](docs/bilingual.png)
 

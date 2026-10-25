@@ -10,8 +10,7 @@
  *  - 保存并稍后继续 persists lastStep + selectedPlan and closes the window; the
  *    next launch resumes on that step (main quits when the wizard closes before
  *    completion — accepted Phase 2 behaviour, the tray lands in Phase 4);
- *  - the 中文/English toggle writes ui.lang immediately, so the language the
- *    user picks here is the language the app starts in;
+ *  - the interface language is fixed to Chinese, including setup;
  *  - 高级配置与本地模式 completes onboarding WITHOUT touching any setting, so
  *    the user lands in the main window with the full settings panel.
  */
@@ -23,7 +22,6 @@ import type {
   ProviderTestResult,
   PublicSettings,
   ThemeMode,
-  UiLang,
 } from '../../shared/protocol';
 import { DOCS, docUrl } from '../../shared/docsLinks';
 import { getSetupDict, type SetupDict } from './i18n';
@@ -71,14 +69,14 @@ function completionBlocked(
 
 export function OnboardingApp() {
   const [step, setStep] = useState(FIRST_STEP);
-  const [lang, setLang] = useState<UiLang>('zh');
+  const lang = 'zh' as const;
   const [plan, setPlan] = useState<OnboardingPlan>('recommended');
   const [shareMimoKey, setShareMimoKey] = useState(true);
   const [settings, setSettings] = useState<PublicSettings | null>(null);
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [audioOk, setAudioOk] = useState(false);
-  const [micEnabled, setMicEnabled] = useState(false);
-  const [micDeviceId, setMicDeviceId] = useState('');
+  const micEnabled = false;
+  const micDeviceId = '';
   const [themDeviceId, setThemDeviceId] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -100,10 +98,7 @@ export function OnboardingApp() {
         if (!alive) return;
         setSettings(s);
         setInfo(a);
-        setLang(s.ui.lang);
         applyTheme(s.ui.theme);
-        setMicEnabled(s.audio.micEnabled);
-        setMicDeviceId(s.audio.micDeviceId ?? '');
         setThemDeviceId(s.audio.themDeviceId ?? '');
         if (o.selectedPlan && o.selectedPlan !== 'advanced') setPlan(o.selectedPlan);
         const forced = stepFromQuery();
@@ -121,16 +116,6 @@ export function OnboardingApp() {
     // boot once; `t` is only read for the failure message
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const toggleLang = useCallback(async () => {
-    const next: UiLang = lang === 'zh' ? 'en' : 'zh';
-    setLang(next);
-    try {
-      setSettings(await window.mcSetup.setSettings({ ui: { lang: next } }));
-    } catch {
-      /* the wizard still renders in the new language; the patch retries on完成 */
-    }
-  }, [lang]);
 
   const saveAndExit = useCallback(async () => {
     try {
@@ -244,9 +229,6 @@ export function OnboardingApp() {
             MeetingBot
             {info ? ` · ${t.common.version(info.version, info.platform)}` : ''}
           </span>
-          <button className="btn btn-sm" onClick={() => void toggleLang()}>
-            {t.common.langToggle}
-          </button>
         </div>
         <div className="setup-steps">
           {stepLabels.map((label, i) => {
@@ -302,10 +284,6 @@ export function OnboardingApp() {
             savedUntested={savedUntested}
             audioOk={audioOk}
             onAudioOk={setAudioOk}
-            micEnabled={micEnabled}
-            onMicEnabled={setMicEnabled}
-            micDeviceId={micDeviceId}
-            onMicDeviceId={setMicDeviceId}
             themDeviceId={themDeviceId}
             onThemDeviceId={setThemDeviceId}
           />

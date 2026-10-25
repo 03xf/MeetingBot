@@ -32,6 +32,27 @@ afterEach(() => {
 });
 
 describe('SettingsStore', () => {
+  it('resets an older English / mic-on profile to Chinese with own-mic off without changing providers or devices', () => {
+    const original = defaultSettings();
+    original.ui.lang = 'en'; original.llm.answerLang = 'english';
+    original.llm.apiKeyEnc = fakeCipher.encrypt('fake-preserved-key'); original.llm.customPrompt = '保留这个提示词';
+    original.audio = { micEnabled: true, micDeviceId: 'my-mic', themDeviceId: 'meeting-input' };
+    writeFileSync(file, JSON.stringify(original));
+    const store = new SettingsStore(file, fakeCipher);
+    expect(store.getPublic().ui.lang).toBe('zh'); expect(store.getPublic().llm.answerLang).toBe('chinese');
+    expect(store.getPublic().audio).toEqual({ micEnabled: false, micDeviceId: 'my-mic', themDeviceId: 'meeting-input' });
+    expect(store.data.llm).toEqual({ ...original.llm, answerLang: 'chinese' });
+    expect(store.data.asr).toEqual(original.asr); expect(store.data.vision).toEqual(original.vision);
+    expect(new SettingsStore(file, fakeCipher).data).toEqual(store.data);
+    expect(JSON.parse(readFileSync(file, 'utf8')).audio.micEnabled).toBe(false);
+  });
+  it('keeps Chinese when an old client submits legacy English language preferences', () => {
+    const store = new SettingsStore(file, fakeCipher);
+    store.applyPatch({ ui: { lang: 'en' }, llm: { answerLang: 'english', customPrompt: '自定义仍有效' }, audio: { micEnabled: true } });
+    expect(store.data.ui.lang).toBe('zh'); expect(store.data.llm.answerLang).toBe('chinese');
+    expect(store.getPublic().llm.customPrompt).toBe('自定义仍有效');
+    expect(store.getPublic().audio.micEnabled).toBe(false);
+  });
   it('fills the new answer hotkey for older profiles and preserves custom or disabled choices', () => {
     writeFileSync(file, JSON.stringify({ version: 2, ui: { hotkeyToggle: 'Alt+Q', hotkeyShot: '' } }));
     const store = new SettingsStore(file, fakeCipher);

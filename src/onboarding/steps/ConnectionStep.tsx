@@ -102,10 +102,6 @@ export interface ConnectionStepProps {
   savedUntested: KeySlot[];
   audioOk: boolean;
   onAudioOk: (ok: boolean) => void;
-  micEnabled: boolean;
-  onMicEnabled: (on: boolean) => void;
-  micDeviceId: string;
-  onMicDeviceId: (id: string) => void;
   themDeviceId: string;
   onThemDeviceId: (id: string) => void;
 }
@@ -120,10 +116,6 @@ export function ConnectionStep({
   savedUntested,
   audioOk,
   onAudioOk,
-  micEnabled,
-  onMicEnabled,
-  micDeviceId,
-  onMicDeviceId,
   themDeviceId,
   onThemDeviceId,
 }: ConnectionStepProps) {
@@ -133,8 +125,6 @@ export function ConnectionStep({
   const [level, setLevel] = useState(0);
   const [detail, setDetail] = useState<string | null>(null);
   const [devices, setDevices] = useState<{ deviceId: string; label: string }[]>([]);
-  const [micLevel, setMicLevel] = useState(0);
-  const [micError, setMicError] = useState<string | null>(null);
   /** slot whose 重新测试 is in flight */
   const [testing, setTesting] = useState<KeySlot | null>(null);
   /** verdicts produced in THIS step (step 3's live in settings.verification) */
@@ -144,9 +134,7 @@ export function ConnectionStep({
   const [testError, setTestError] = useState<string | null>(null);
 
   const captureRef = useRef<LoopbackCapture | MicCapture | null>(null);
-  const micRef = useRef<MicCapture | null>(null);
   const levelRef = useRef(0);
-  const micLevelRef = useRef(0);
   const lastLoudRef = useRef(0);
   const runningRef = useRef(false);
 
@@ -165,9 +153,7 @@ export function ConnectionStep({
   useEffect(() => {
     const id = setInterval(() => {
       setLevel(levelBar(levelRef.current));
-      setMicLevel(levelBar(micLevelRef.current));
       levelRef.current *= 0.7;
-      micLevelRef.current *= 0.7;
       if (!runningRef.current) return;
       const loud = Date.now() - lastLoudRef.current < LOUD_WINDOW_MS;
       setState(loud ? 'ok' : 'silent');
@@ -191,8 +177,6 @@ export function ConnectionStep({
       runningRef.current = false;
       void captureRef.current?.stop();
       captureRef.current = null;
-      void micRef.current?.stop();
-      micRef.current = null;
     };
   }, []);
 
@@ -230,40 +214,6 @@ export function ConnectionStep({
       setState(NO_DEVICE_RE.test(msg) ? 'no-device' : 'failed');
     }
   }, [isMac, onPcm, refreshDevices, stopTest, themDeviceId]);
-
-  // microphone preview: only alive while 「启用麦克风」 is selected
-  useEffect(() => {
-    let cancelled = false;
-    if (!micEnabled) {
-      void micRef.current?.stop();
-      micRef.current = null;
-      micLevelRef.current = 0;
-      setMicError(null);
-      return;
-    }
-    void (async () => {
-      await micRef.current?.stop();
-      micRef.current = null;
-      const cap = new MicCapture();
-      try {
-        await cap.start(micDeviceId || undefined, (buf) => {
-          micLevelRef.current = Math.max(micLevelRef.current, rmsOf(buf));
-        });
-        if (cancelled) {
-          await cap.stop();
-          return;
-        }
-        micRef.current = cap;
-        setMicError(null);
-        refreshDevices();
-      } catch (e) {
-        if (!cancelled) setMicError(t.connection.micPermissionFail((e as Error).message));
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [micEnabled, micDeviceId, refreshDevices, t]);
 
   const def = planDefinition(plan);
   const asrKey = def.asr ? slotState(settings, def.asr.slot) : null;
@@ -414,50 +364,6 @@ export function ConnectionStep({
         )}
       </section>
 
-      <section className="setup-card">
-        <div className="key-card-head">
-          <div className="setup-card-title">{t.connection.micTitle}</div>
-          <span className="tag">{t.common.optional}</span>
-        </div>
-        <div className="setup-radios">
-          <label className="setup-radio">
-            <input type="radio" checked={!micEnabled} onChange={() => onMicEnabled(false)} />
-            <span>{t.connection.micOff}</span>
-          </label>
-          <label className="setup-radio">
-            <input type="radio" checked={micEnabled} onChange={() => onMicEnabled(true)} />
-            <span>{t.connection.micOn}</span>
-          </label>
-        </div>
-        {micEnabled && (
-          <>
-            <div className="setup-field">
-              <span className="setup-field-label">{t.connection.micDevice}</span>
-              <select
-                className="setup-select"
-                value={micDeviceId}
-                onChange={(e) => onMicDeviceId(e.target.value)}
-              >
-                <option value="">{t.connection.micDefault}</option>
-                {devices.map((d) => (
-                  <option key={d.deviceId} value={d.deviceId}>
-                    {d.label || d.deviceId}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="meter-row">
-              <span className="meter-label">{t.connection.level}</span>
-              <div className="meter">
-                <div className="meter-fill" style={{ width: `${Math.round(micLevel * 100)}%` }} />
-              </div>
-            </div>
-            {micError && <div className="key-notice key-notice-err">{micError}</div>}
-          </>
-        )}
-        <div className="key-hint">{t.connection.micHint}</div>
-      </section>
-
       {providerRows.length > 0 && (
         <section className="setup-card">
           <div className="key-card-head">
@@ -549,9 +455,9 @@ export function ConnectionStep({
           )}
           {row(
             'mic',
-            micEnabled ? 'ok' : 'na',
+            'na',
             t.connection.rowMic,
-            micEnabled ? t.connection.enabled : t.connection.disabled,
+            t.connection.disabled,
           )}
           {row('vision', 'na', t.connection.rowVision, t.connection.visionUnset)}
           {row(
