@@ -34,6 +34,7 @@ import { DiagnosticsPanel } from './components/DiagnosticsPanel';
 import { HelpPanel } from './components/HelpPanel';
 import { KnowledgePanel } from './components/KnowledgePanel';
 import { StatusBar } from './components/StatusBar';
+import { ResizablePanes } from './components/ResizablePanes';
 import { AnswerSession, type AnswerTurn } from './components/AnswerSession';
 import { I18nProvider, getDict, type Dict } from './i18n';
 
@@ -91,6 +92,12 @@ interface QuestionRange {
 
 export function App() {
   const [settings, setSettings] = useState<PublicSettings | null>(null);
+  const savePaneRatio = useCallback((value: number) => {
+    setSettings(s => s ? { ...s, ui: { ...s.ui, transcriptRatio: value } } : s);
+    void window.mc.setSettings({ ui: { transcriptRatio: value } }).catch(() => {
+      setWindowNotice('宽度已调整，但未能保存；重新启动后可能恢复原来的比例。');
+    });
+  }, []);
   const [asr, setAsr] = useState<AsrUiState>({ phase: 'loading', workerState: 'loading' });
   const [capturing, setCapturing] = useState(false);
   const [captureStarting, setCaptureStarting] = useState(false);
@@ -1103,7 +1110,7 @@ export function App() {
         />
       )}
 
-      <div className="panes">
+      <ResizablePanes ratio={settings?.ui.transcriptRatio} disabled={!settings} onCommit={savePaneRatio}>
         <TranscriptPanel
           segments={segments}
           partials={partials}
@@ -1150,7 +1157,7 @@ export function App() {
           onFreeAsk={(q) => askLlm('free', q)}
           onShotAsk={askShot}
         />
-      </div>
+      </ResizablePanes>
 
       <StatusBar
         asr={asr}

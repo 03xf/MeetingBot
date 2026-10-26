@@ -19,7 +19,7 @@
 
 ## 下载
 
-> **v0.2.0-beta.16：鼠标截取区间与精简界面**。点击“开始截取”，再次点击“结束截取并回答”，只回答这段录音；支持与 Right 快捷键交替使用。删除中英和麦克风按钮，界面及默认回答为中文，仅采集对方系统声音。下载 [beta.16](https://github.com/03xf/MeetingBot/releases/tag/v0.2.0-beta.16)，见 [版本说明](docs/releases/v0.2.0-beta.16.md)。
+> **v0.2.0-beta.17：左右栏宽度可调**。拖动转写与回答区之间的分隔线调整宽度，松手自动保存，双击恢复等宽。浏览锁定下也可操作，重启后保留比例。下载 [beta.17](https://github.com/03xf/MeetingBot/releases/tag/v0.2.0-beta.17)，见 [版本说明](docs/releases/v0.2.0-beta.17.md)。
 
 > **个人知识库增强版**：本仓库基于 [JWM0203/MeetingCopilot](https://github.com/JWM0203/MeetingCopilot)，新增跨会话多文档知识库、本地检索、知识库优先回答和参考原文展示。见 [使用说明](docs/user/PERSONAL_KNOWLEDGE.zh-CN.md)。下方 Windows 安装包由本仓库的增强版源码构建。
 

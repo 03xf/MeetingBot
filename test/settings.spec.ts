@@ -32,6 +32,19 @@ afterEach(() => {
 });
 
 describe('SettingsStore', () => {
+  it('persists split widths independently of other appearance and model settings', () => {
+    const store = new SettingsStore(file, fakeCipher);
+    expect(store.getPublic().ui.transcriptRatio).toBe(0.5);
+    store.applyPatch({ ui: { transcriptRatio: 0.32 } });
+    store.applyPatch({ ui: { theme: 'light', opacity: 0.6 } });
+    const restored = new SettingsStore(file, fakeCipher);
+    expect(restored.getPublic().ui).toMatchObject({ transcriptRatio: 0.32, theme: 'light', opacity: 0.6 });
+    expect(restored.data.llm).toEqual(store.data.llm);
+    restored.applyPatch({ ui: { transcriptRatio: NaN } });
+    expect(restored.getPublic().ui.transcriptRatio).toBe(0.5);
+    restored.applyPatch({ ui: { transcriptRatio: 100 } });
+    expect(restored.getPublic().ui.transcriptRatio).toBe(0.85);
+  });
   it('resets an older English / mic-on profile to Chinese with own-mic off without changing providers or devices', () => {
     const original = defaultSettings();
     original.ui.lang = 'en'; original.llm.answerLang = 'english';
@@ -346,7 +359,7 @@ describe('migrateSettingsV1ToV2 (pure)', () => {
     expect(v2.asr.realtime?.baseUrl).toBe(V1_FILE.asr.realtime.baseUrl);
     // Existing choices survive. The new answer key remains disabled, and
     // upgrading never silently enables OS auto-start.
-    expect(v2.ui).toEqual({ ...V1_FILE.ui, hotkeyConfirm: defaultSettings().ui.hotkeyConfirm, autoLaunch: false, trayNoticeShown: false });
+    expect(v2.ui).toEqual({ ...V1_FILE.ui, hotkeyConfirm: defaultSettings().ui.hotkeyConfirm, transcriptRatio: defaultSettings().ui.transcriptRatio, autoLaunch: false, trayNoticeShown: false });
     expect(v2.audio).toEqual(V1_FILE.audio);
   });
 

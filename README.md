@@ -19,7 +19,7 @@ Live transcription of the other side · first-person teleprompter answers · cap
 
 ## Download
 
-> **v0.2.0-beta.16: click to select an audio range.** Click Start range, then End and answer, or mix the button with your configured hotkey. The interface/default answers are Chinese; language and own-microphone controls are removed. Only meeting/system audio is captured. Download [beta.16](https://github.com/03xf/MeetingBot/releases/tag/v0.2.0-beta.16); see [release notes](docs/releases/v0.2.0-beta.16.md).
+> **v0.2.0-beta.17: resizable transcript and answer panes.** Drag the divider to adjust widths; release to save, double-click to reset. Works in Browse mode and restores the preferred ratio after restart. Download [beta.17](https://github.com/03xf/MeetingBot/releases/tag/v0.2.0-beta.17); see [release notes](docs/releases/v0.2.0-beta.17.md).
 
 > **Personal knowledge edition:** This repository extends [JWM0203/MeetingCopilot](https://github.com/JWM0203/MeetingCopilot) with a shared, multi-document personal library, local retrieval, knowledge-first answering and inspectable reference passages. See the [personal knowledge guide (中文)](docs/user/PERSONAL_KNOWLEDGE.zh-CN.md). The Windows downloads below are built from this enhanced edition.
 

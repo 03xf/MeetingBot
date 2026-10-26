@@ -227,6 +227,8 @@ export interface SettingsFile {
     hotkeyConfirm: string;
     /** Main background alpha (0.05–1); does not dim text, buttons or code. */
     opacity: number;
+    /** Preferred left transcript share; 0.15–0.85, defaults to 0.5. */
+    transcriptRatio?: number;
     /** answer-body font size (small=13px / medium=16px / large=19px) */
     fontScale: FontScale;
     theme: ThemeMode;
@@ -309,6 +311,7 @@ export interface PublicSettings {
     hotkeyShot: string;
     hotkeyConfirm: string;
     opacity: number;
+    transcriptRatio?: number;
     fontScale: FontScale;
     theme: ThemeMode;
     lang: UiLang;
@@ -366,6 +369,7 @@ export interface SettingsPatch {
     hotkeyShot?: string;
     hotkeyConfirm?: string;
     opacity?: number;
+    transcriptRatio?: number;
     fontScale?: FontScale;
     theme?: ThemeMode;
     lang?: UiLang;

@@ -137,3 +137,7 @@ Duplicate operations are ignored while processing. Stop, switch session or clear
 ## Screenshot with the mouse (beta.15)
 
 Click **Screenshot & ask** in the top toolbar, drag a region, then receive the vision answer. Right-click or use Cancel to dismiss the selection. It also works in text-only mode without changing subsequent audio answers. Configure the vision model beforehand; missing configuration only shows an inline notice. Enter Edit and Settings yourself to configure it. Existing screenshot hotkeys remain available; blank disables a binding.
+
+## Adjust pane widths (beta.17)
+
+Drag the divider between transcript and answers. Release to save; the preferred ratio returns after restart. Double-click to restore equal widths. Available in Browse mode; both panes retain a minimum width when resizing the window.

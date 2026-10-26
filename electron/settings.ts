@@ -20,7 +20,7 @@ import type {
   SettingsPatch,
 } from '../shared/protocol';
 import { defaultHotkeysForPlatform } from '../shared/platform';
-import { backgroundOpacity, DEFAULT_BACKGROUND_OPACITY } from '../shared/appearance';
+import { backgroundOpacity, DEFAULT_BACKGROUND_OPACITY, DEFAULT_TRANSCRIPT_RATIO, transcriptRatio } from '../shared/appearance';
 import { providerIdForEndpoint } from '../shared/providerCatalog';
 
 export interface SecretCipher {
@@ -86,6 +86,7 @@ export function defaultSettings(platform: string = process.platform): SettingsFi
       hotkeyShot: hotkeys.shot,
       hotkeyConfirm: hotkeys.confirm,
       opacity: DEFAULT_BACKGROUND_OPACITY,
+      transcriptRatio: DEFAULT_TRANSCRIPT_RATIO,
       // medium = 16px answer body (was 13px) — readable at a glance mid-interview
       fontScale: 'medium',
       theme: 'dark',
@@ -361,6 +362,7 @@ export class SettingsStore {
     if (patch.ui) {
       Object.assign(this.data.ui, stripUndefined(patch.ui));
       this.data.ui.opacity = backgroundOpacity(this.data.ui.opacity);
+      this.data.ui.transcriptRatio = transcriptRatio(this.data.ui.transcriptRatio);
     }
     if (patch.audio) Object.assign(this.data.audio, stripUndefined(patch.audio));
     this.data.ui.lang = 'zh';
@@ -470,6 +472,7 @@ export class SettingsStore {
       ui: {
         ...d.ui,
         opacity: backgroundOpacity(d.ui.opacity),
+        transcriptRatio: transcriptRatio(d.ui.transcriptRatio),
         lang: 'zh',
         // both are optional on disk (files written before Phase 4 lack them)
         // but always booleans on the wire, so the UI needs no ?? dance

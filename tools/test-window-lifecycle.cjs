@@ -22,6 +22,10 @@ async function run() {
   const pause = ms => new Promise(r => setTimeout(r, ms));
   async function until(fn, label) {
     for (let n = 0; n < 160; n++) { if (await fn()) return; await pause(40); }
+    if(label.startsWith('pane')) {
+      console.error('[pane-debug]',await paneInfo(),await js('window.__paneEvents'));
+      fs.writeFileSync(path.join(qa,'pane-failure.png'),(await win.webContents.capturePage()).toPNG());
+    }
     throw Error('Timed out: ' + label);
   }
   let win, template, requests = 0, aborted = 0, encodes = 0, visionRequests = 0;
@@ -103,6 +107,48 @@ async function run() {
   await pause(100); // let the compositor paint the notice before the preview
   fs.writeFileSync(path.join(qa,'browse-lock.png'),(await win.webContents.capturePage()).toPNG());
   console.log('[window-lifecycle] UI, direct IPC, tray and external actions respect browse lock');
+  // Chromium pointer routing only; this does not certify native mouse hit-testing.
+  const paneInfo = () => js('(()=>{const p=document.querySelector(".panes").getBoundingClientRect(),d=document.querySelector(".pane-divider").getBoundingClientRect(),l=document.querySelector(".pane-transcript").getBoundingClientRect();return {x:p.x,y:p.y,width:p.width,dx:d.x+d.width/2,dy:d.y+d.height/2,divider:d.width,left:l.width,ratio:l.width/(p.width-d.width),dragging:document.querySelector(".panes").classList.contains("panes-resizing")}})()');
+  await js('window.__paneEvents=[];for(const type of ["pointerdown","pointerup","pointercancel","gotpointercapture","lostpointercapture","mouseup"]){document.addEventListener(type,e=>{window.__paneEvents.push({type,id:e.pointerId,x:e.clientX,y:e.clientY,buttons:e.buttons,target:e.target.className});window.__paneEvents=window.__paneEvents.slice(-30)},true)}');
+  async function dragPane(ratio, end=true) {
+    const p=await paneInfo();
+    await js('document.querySelector(".pane-divider").addEventListener("pointerdown",e=>window.__panePointer=e.pointerId,{once:true})');
+    win.webContents.sendInputEvent({type:'mouseDown',button:'left',clickCount:1,x:Math.round(p.dx),y:Math.round(p.dy)});
+    win.webContents.sendInputEvent({type:'mouseMove',button:'left',modifiers:['leftButtonDown'],x:Math.round(p.x+(p.width-p.divider)*ratio+p.divider/2),y:Math.round(p.dy)});
+    await until(async()=>(await paneInfo()).dragging,'pane pointer capture');
+    await until(async()=>{const actual=(await paneInfo()).ratio;return ratio===1?actual>0.75&&actual<0.9:Math.abs(actual-ratio)<0.015},'pane width updates');
+    if(end) {
+      win.webContents.sendInputEvent({type:'mouseUp',button:'left',clickCount:1,x:Math.round(p.x+(p.width-p.divider)*ratio+p.divider/2),y:Math.round(p.dy)});
+      await until(async()=>!(await paneInfo()).dragging,'pane drag released');
+    }
+    return p;
+  }
+  assert(Math.abs((await paneInfo()).ratio-0.5)<0.01);
+  const beforeResize=await js('window.mc.getSettings().then(s=>s.ui.transcriptRatio)');
+  const pendingPane=await dragPane(0.32,false);
+  assert.equal(await js('window.mc.getSettings().then(s=>s.ui.transcriptRatio)'),beforeResize,'dragging must not write settings per mouse move');
+  win.webContents.sendInputEvent({type:'mouseUp',button:'left',clickCount:1,x:Math.round(pendingPane.x+(pendingPane.width-pendingPane.divider)*0.32+pendingPane.divider/2),y:Math.round(pendingPane.dy)});
+  await until(()=>js('window.mc.getSettings().then(s=>Math.abs(s.ui.transcriptRatio-0.32)<0.01)'),'pane ratio persisted on release');
+  const savedPane=await js('window.mc.getSettings().then(s=>s.ui.transcriptRatio)');
+  const cancelledPane=await dragPane(0.65,false);
+  await js('document.querySelector(".pane-divider").dispatchEvent(new PointerEvent("pointercancel",{bubbles:true,pointerId:window.__panePointer}))');
+  win.webContents.sendInputEvent({type:'mouseUp',button:'left',clickCount:1,x:Math.round(cancelledPane.dx),y:Math.round(cancelledPane.dy)});
+  await until(async()=>!(await paneInfo()).dragging && Math.abs((await paneInfo()).ratio-savedPane)<0.01,'cancelled resize restores previous width');
+  assert.equal(await js('window.mc.getSettings().then(s=>s.ui.transcriptRatio)'),savedPane);
+  const resetPane=await paneInfo();
+  win.webContents.sendInputEvent({type:'mouseDown',button:'left',clickCount:2,x:Math.round(resetPane.dx),y:Math.round(resetPane.dy)});
+  win.webContents.sendInputEvent({type:'mouseUp',button:'left',clickCount:2,x:Math.round(resetPane.dx),y:Math.round(resetPane.dy)});
+  await until(()=>js('window.mc.getSettings().then(s=>s.ui.transcriptRatio===0.5)'),'double click resets pane widths');
+  await until(async()=>Math.abs((await paneInfo()).ratio-0.5)<0.01,'double click visible equal split');
+  await dragPane(1);
+  assert((await paneInfo()).left>220);
+  assert((await paneInfo()).width-(await paneInfo()).divider-(await paneInfo()).left>=219);
+  await dragPane(0.34);
+  await until(()=>js('window.mc.getSettings().then(s=>Math.abs(s.ui.transcriptRatio-0.34)<0.01)'),'final preferred width saved');
+  const preferredPane=await js('window.mc.getSettings().then(s=>s.ui.transcriptRatio)');
+  assert.equal(await js('window.mc.getWindowMode()'),'browse');assert.equal(focusEvents,0);assert.equal(styleWrites,0);
+  fs.writeFileSync(path.join(qa,'pane-resize.png'),(await win.webContents.capturePage()).toPNG());
+  console.log('[window-lifecycle] divider drag, pointer cancel, double-click reset, bounds and commit-only persistence passed without activation');
   for (let i = 0; i < 20; i++) {
     menu('隐藏窗口'); await pause(10);
     assert.equal(win.getOpacity(), 0); assert(win.isVisible(), 'parked render widget stays mapped');
@@ -215,6 +261,8 @@ async function run() {
   for (const width of [640, 940]) {
     win.setSize(width,700);await pause(100);
     assert.equal(await js('Array.from(document.querySelectorAll(".titlebar button")).every(b=>{const r=b.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1})'),true,'toolbar buttons fit the window');
+    assert.equal(await js('(()=>{const p=document.querySelector(".panes").getBoundingClientRect(),d=document.querySelector(".pane-divider").getBoundingClientRect(),l=document.querySelector(".pane-transcript").getBoundingClientRect();return l.width>=Math.min(220,(p.width-d.width)/3)-1&&p.width-d.width-l.width>=Math.min(220,(p.width-d.width)/3)-1})()'),true,'both panes remain usable at narrow window sizes');
+    assert.equal(await js('window.mc.getSettings().then(s=>s.ui.transcriptRatio)'),preferredPane,'window size changes must preserve preferred ratio');
   }
   win.webContents.invalidate();await pause(100);
   fs.writeFileSync(path.join(qa,'screenshot-button.png'),(await win.webContents.capturePage()).toPNG());
@@ -236,10 +284,12 @@ async function run() {
   assert.equal(win.isFocusable(), false); assert.equal(focusEvents, 0);
   assert(template.some(i => i.label === '开始转写'), 'recovery must stop capture state');
   assert.equal(await js('document.querySelector(".session-picker > button").textContent'), retainedSessionName);
+  await until(async()=>Math.abs((await paneInfo()).ratio-preferredPane)<0.01,'pane preference restored after renderer recovery');
+  assert.equal(await js('window.mc.getSettings().then(s=>s.ui.transcriptRatio)'),preferredPane);
   await until(() => fs.existsSync(path.join(profile, 'window-faults.json')), 'fault log written');
   const faults = fs.readFileSync(path.join(profile, 'window-faults.json'), 'utf8');
   assert(faults.includes('unresponsive')); assert(!faults.includes('fake-window-qa')); assert(!faults.includes('synthetic pending question'));
-  console.log('[window-lifecycle] recovery, generation abort, capture reset, saved session and sanitized fault log passed');
+  console.log('[window-lifecycle] recovery, saved pane width, generation abort, capture reset, session and sanitized fault log passed');
   const beforeMissingShot=encodes;await clickScreenshot();
   await until(()=>js('document.body.textContent.includes("再点击截图提问")'),'missing vision setup hint');
   assert.equal(BrowserWindow.getAllWindows().length,1);assert.equal(encodes,beforeMissingShot);assert.equal(visionRequests,1);

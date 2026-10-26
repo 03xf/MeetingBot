@@ -281,8 +281,9 @@ body {
 /* ---------- two-pane layout ---------- */
 .panes {
   flex: 1;
-  display: flex;
+  display: grid;
   min-height: 0;
+  min-width: 0;
 }
 
 .pane {
@@ -293,8 +294,35 @@ body {
   min-height: 0;
 }
 
-.pane-transcript {
-  border-right: 1px solid var(--border-1);
+.pane-divider {
+  position: relative;
+  cursor: col-resize;
+  background: var(--surface-soft);
+  border-inline: 1px solid var(--border-1);
+  touch-action: none;
+  user-select: none;
+  -webkit-app-region: no-drag;
+}
+.pane-divider::after {
+  content: '';
+  position: absolute;
+  width: 2px;
+  height: 28px;
+  left: calc(50% - 1px);
+  top: calc(50% - 14px);
+  border-radius: 2px;
+  background: var(--text-muted);
+}
+.pane-divider:hover, .pane-divider:focus-visible, .panes-resizing > .pane-divider {
+  background: var(--accent-soft);
+}
+.pane-divider:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+.panes-resizing, .panes-resizing * {
+  user-select: none !important;
+  cursor: col-resize !important;
 }
 
 .pane-head {
