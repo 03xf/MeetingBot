@@ -19,7 +19,7 @@
 
 ## 下载
 
-> **v0.2.0-beta.17：左右栏宽度可调**。拖动转写与回答区之间的分隔线调整宽度，松手自动保存，双击恢复等宽。浏览锁定下也可操作，重启后保留比例。下载 [beta.17](https://github.com/03xf/MeetingBot/releases/tag/v0.2.0-beta.17)，见 [版本说明](docs/releases/v0.2.0-beta.17.md)。
+> **v0.2.0-beta.18：调整截取按钮位置**。“开始截取”现位于 HUD 右侧、“浏览·锁定”左侧，原有截取功能和可拖动左右栏保持不变。下载 [beta.18](https://github.com/03xf/MeetingBot/releases/tag/v0.2.0-beta.18)，见 [版本说明](docs/releases/v0.2.0-beta.18.md)。
 
 > **个人知识库增强版**：本仓库基于 [JWM0203/MeetingCopilot](https://github.com/JWM0203/MeetingCopilot)，新增跨会话多文档知识库、本地检索、知识库优先回答和参考原文展示。见 [使用说明](docs/user/PERSONAL_KNOWLEDGE.zh-CN.md)。下方 Windows 安装包由本仓库的增强版源码构建。
 

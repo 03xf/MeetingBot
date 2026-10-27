@@ -952,15 +952,6 @@ export function App() {
             </select>
           )}
           <button
-            className={rangeStage === 'recording' ? 'btn btn-live range-action' : 'btn range-action'}
-            onClick={toggleQuestionRange}
-            disabled={rangeButtonDisabled}
-            title={t.question.rangeButtonHint}
-            aria-pressed={rangeStage === 'recording'}
-          >
-            {rangeStage === 'recording' ? t.question.rangeEnd : rangeStage === 'finishing' ? t.question.rangeProcessing : t.question.rangeStart}
-          </button>
-          <button
             className="btn btn-primary question-cut-action"
             onClick={confirmQuestion}
             disabled={!waiting && confirmDisabled}
@@ -996,6 +987,15 @@ export function App() {
           </button>
           <button className="btn" onClick={() => setShowHud((v) => !v)} title={t.titlebar.hudTitle}>
             HUD
+          </button>
+          <button
+            className={rangeStage === 'recording' ? 'btn btn-live range-action' : 'btn range-action'}
+            onClick={toggleQuestionRange}
+            disabled={rangeButtonDisabled}
+            title={t.question.rangeButtonHint}
+            aria-pressed={rangeStage === 'recording'}
+          >
+            {rangeStage === 'recording' ? t.question.rangeEnd : rangeStage === 'finishing' ? t.question.rangeProcessing : t.question.rangeStart}
           </button>
           {window.mc.platform === 'win32' && <button
             className={windowMode === 'edit' ? 'btn btn-on interaction-mode' : 'btn interaction-mode'}
